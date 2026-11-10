@@ -1,0 +1,25 @@
+{
+  "name": "tobacco-erp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Zimbabwe tobacco floor operations ERP — e-Port inspired. Phase 1: UI on mocked data.",
+  "packageManager": "pnpm@10.30.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@tobacco/web",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "e2e": "pnpm --filter @tobacco/web e2e",
+    "screens": "pnpm --filter @tobacco/web screens",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\" --ignore-path .gitignore"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2",
+    "turbo": "2.11.10",
+    "typescript": "5.9.3"
+  }
+}

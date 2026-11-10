@@ -1,0 +1,23 @@
+{
+  "name": "@tobacco/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared domain types, permissions, roles, message catalogue and demo fixtures",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "decimal.js": "10.6.0"
+  },
+  "devDependencies": {
+    "@tobacco/config": "workspace:*",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  }
+}

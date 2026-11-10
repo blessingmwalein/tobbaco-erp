@@ -1,0 +1,12 @@
+{
+  "extends": "@tobacco/config/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": ["next-env.d.ts", "src", "e2e", "*.config.ts", "*.config.mjs", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

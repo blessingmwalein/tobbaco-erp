@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@tobacco/design-system/theme.css";
+
+/* Tailwind v4 must scan workspace packages that contain class names. */
+@source "../../../../packages/ui/src";
+
+@layer base {
+  html,
+  body {
+    min-height: 100%;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+/* Print: tickets and sales sheets render cleanly on paper. */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  aside,
+  header[data-chrome],
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+}

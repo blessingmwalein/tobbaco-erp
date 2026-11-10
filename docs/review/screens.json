@@ -1,0 +1,533 @@
+[
+  {
+    "id": "00-login",
+    "path": "/login",
+    "role": null,
+    "file": "screenshots/00-login.png"
+  },
+  {
+    "id": "01-dashboard-fresh",
+    "path": "/dashboard",
+    "role": "demo-operator",
+    "scenario": "FRESH",
+    "file": "screenshots/01-dashboard-fresh.png"
+  },
+  {
+    "id": "02-dashboard-processed",
+    "path": "/dashboard",
+    "role": "demo-operator",
+    "scenario": "PROCESSED",
+    "file": "screenshots/02-dashboard-processed.png"
+  },
+  {
+    "id": "03-sale-day-workflow",
+    "path": "/sale-day",
+    "role": "demo-operator",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/03-sale-day-workflow.png"
+  },
+  {
+    "id": "04-sale-dates",
+    "path": "/setup/sale-dates",
+    "role": "receiving-supervisor",
+    "scenario": "START_OF_DAY",
+    "file": "screenshots/04-sale-dates.png"
+  },
+  {
+    "id": "05-start-of-day",
+    "path": "/setup/start-of-day",
+    "role": "data-processing-supervisor",
+    "scenario": "FRESH",
+    "file": "screenshots/05-start-of-day.png"
+  },
+  {
+    "id": "06-floor-hub",
+    "path": "/floor",
+    "role": "demo-operator",
+    "scenario": "TICKETS_CONFIRMED",
+    "file": "screenshots/06-floor-hub.png"
+  },
+  {
+    "id": "10-buyers",
+    "path": "/buyers",
+    "role": "system-admin",
+    "scenario": "FRESH",
+    "file": "screenshots/10-buyers.png"
+  },
+  {
+    "id": "10-creditor-drill-in",
+    "path": "/creditors",
+    "role": "data-processing-supervisor",
+    "scenario": "PROCESSED",
+    "file": "screenshots/10-creditor-drill-in.png"
+  },
+  {
+    "id": "10-creditors",
+    "path": "/creditors",
+    "role": "supervisor",
+    "scenario": "PROCESSED",
+    "file": "screenshots/10-creditors.png"
+  },
+  {
+    "id": "10-grower-bank-accounts",
+    "path": "/growers/V100074",
+    "role": "accounts",
+    "scenario": "FRESH",
+    "file": "screenshots/10-grower-bank-accounts.png"
+  },
+  {
+    "id": "10-grower-detail-v100060",
+    "path": "/growers/V100060",
+    "role": "supervisor",
+    "scenario": "PROCESSED",
+    "file": "screenshots/10-grower-detail-v100060.png"
+  },
+  {
+    "id": "10-growers-register",
+    "path": "/growers",
+    "role": "supervisor",
+    "scenario": "PROCESSED",
+    "file": "screenshots/10-growers-register.png"
+  },
+  {
+    "id": "10-timb-bookings",
+    "path": "/timb/bookings",
+    "role": "supervisor",
+    "scenario": "BOOKINGS_IMPORTED",
+    "file": "screenshots/10-timb-bookings.png"
+  },
+  {
+    "id": "10-timb-import-1-select-type",
+    "path": "/timb/imports/new",
+    "role": "timb-clerk",
+    "scenario": "START_OF_DAY",
+    "file": "screenshots/10-timb-import-1-select-type.png"
+  },
+  {
+    "id": "10-timb-import-2-upload",
+    "path": "/timb/imports/new?type=GROWER_BOOKING",
+    "role": "timb-clerk",
+    "scenario": "START_OF_DAY",
+    "file": "screenshots/10-timb-import-2-upload.png"
+  },
+  {
+    "id": "10-timb-import-3-validate-renamed",
+    "path": "/timb/imports/new?type=GROWER_BOOKING",
+    "role": "timb-clerk",
+    "scenario": "START_OF_DAY",
+    "file": "screenshots/10-timb-import-3-validate-renamed.png"
+  },
+  {
+    "id": "10-timb-import-4-preview-with-errors",
+    "path": "/timb/imports/new?type=GROWER_BOOKING",
+    "role": "timb-clerk",
+    "scenario": "START_OF_DAY",
+    "file": "screenshots/10-timb-import-4-preview-with-errors.png"
+  },
+  {
+    "id": "10-timb-import-6-result",
+    "path": "/timb/imports/new?type=GROWER_BOOKING",
+    "role": "timb-clerk",
+    "scenario": "START_OF_DAY",
+    "file": "screenshots/10-timb-import-6-result.png"
+  },
+  {
+    "id": "10-timb-import-detail",
+    "path": "/timb/imports/import-0001",
+    "role": "supervisor",
+    "scenario": "BOOKINGS_IMPORTED",
+    "file": "screenshots/10-timb-import-detail.png"
+  },
+  {
+    "id": "10-timb-imports-history",
+    "path": "/timb/imports",
+    "role": "timb-clerk",
+    "scenario": "BOOKINGS_IMPORTED",
+    "file": "screenshots/10-timb-imports-history.png"
+  },
+  {
+    "id": "20-receiving-transporter-note",
+    "path": "/floor/receiving",
+    "role": "receiving-clerk",
+    "scenario": "BOOKINGS_IMPORTED",
+    "file": "screenshots/20-receiving-transporter-note.png"
+  },
+  {
+    "id": "21-receiving-bale-capture",
+    "path": "/floor/receiving/gdn-0000005/bales",
+    "role": "receiving-clerk",
+    "scenario": "RECEIVING_IN_PROGRESS",
+    "file": "screenshots/21-receiving-bale-capture.png"
+  },
+  {
+    "id": "22-delivery-notes",
+    "path": "/receiving/delivery-notes",
+    "role": "receiving-supervisor",
+    "scenario": "TICKETS_CONFIRMED",
+    "file": "screenshots/22-delivery-notes.png"
+  },
+  {
+    "id": "23-delivery-note-detail",
+    "path": "/receiving/delivery-notes/gdn-0000005",
+    "role": "receiving-supervisor",
+    "scenario": "TICKETS_CONFIRMED",
+    "file": "screenshots/23-delivery-note-detail.png"
+  },
+  {
+    "id": "24-transporter-notes",
+    "path": "/receiving/transporter-notes",
+    "role": "receiving-supervisor",
+    "scenario": "RECEIVED",
+    "file": "screenshots/24-transporter-notes.png"
+  },
+  {
+    "id": "25-receiving-corrections",
+    "path": "/receiving/corrections",
+    "role": "receiving-supervisor",
+    "scenario": "RECEIVED",
+    "file": "screenshots/25-receiving-corrections.png"
+  },
+  {
+    "id": "30-tickets-queue",
+    "path": "/floor/tickets",
+    "role": "ticket-clerk",
+    "scenario": "RECEIVED",
+    "file": "screenshots/30-tickets-queue.png"
+  },
+  {
+    "id": "31-ticket-printing",
+    "path": "/floor/tickets/gdn-0000005",
+    "role": "ticket-clerk",
+    "scenario": "RECEIVED",
+    "file": "screenshots/31-ticket-printing.png"
+  },
+  {
+    "id": "32-ticket-confirmed",
+    "path": "/floor/tickets/gdn-0000005",
+    "role": "ticket-clerk",
+    "scenario": "TICKETS_CONFIRMED",
+    "file": "screenshots/32-ticket-confirmed.png"
+  },
+  {
+    "id": "33-tickets-overview",
+    "path": "/tickets",
+    "role": "ticket-clerk",
+    "scenario": "TICKETS_CONFIRMED",
+    "file": "screenshots/33-tickets-overview.png"
+  },
+  {
+    "id": "40-floor-summary-select",
+    "path": "/floor/floor-summary",
+    "role": "floor-summary-clerk",
+    "scenario": "TICKETS_CONFIRMED",
+    "file": "screenshots/40-floor-summary-select.png"
+  },
+  {
+    "id": "41-floor-summary-scanning",
+    "path": "/floor/floor-summary",
+    "role": "floor-summary-clerk",
+    "scenario": "TICKETS_CONFIRMED",
+    "file": "screenshots/41-floor-summary-scanning.png"
+  },
+  {
+    "id": "42-floor-summary-check",
+    "path": "/floor/floor-summary/check",
+    "role": "floor-summary-clerk",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/42-floor-summary-check.png"
+  },
+  {
+    "id": "43-floor-summary-list",
+    "path": "/floor-summary",
+    "role": "supervisor",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/43-floor-summary-list.png"
+  },
+  {
+    "id": "50-data-capture-home",
+    "path": "/floor/data-capture",
+    "role": "data-clerk",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/50-data-capture-home.png"
+  },
+  {
+    "id": "51-data-capture-ebuying-form",
+    "path": "/floor/data-capture/e-buying",
+    "role": "data-clerk",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/51-data-capture-ebuying-form.png"
+  },
+  {
+    "id": "52-data-capture-last-bale",
+    "path": "/floor/data-capture/all-details",
+    "role": "data-clerk",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/52-data-capture-last-bale.png"
+  },
+  {
+    "id": "53-batches-list",
+    "path": "/batches",
+    "role": "demo-operator",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/53-batches-list.png"
+  },
+  {
+    "id": "54-batch-blind-entry",
+    "path": "/batches/batch-4",
+    "role": "data-clerk",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/54-batch-blind-entry.png"
+  },
+  {
+    "id": "55-batch-posted",
+    "path": "/batches/batch-4",
+    "role": "demo-operator",
+    "scenario": "READY_TO_BALANCE",
+    "file": "screenshots/55-batch-posted.png"
+  },
+  {
+    "id": "60-sales-list",
+    "path": "/sales",
+    "role": "data-processing-supervisor",
+    "scenario": "FLOOR_SUMMARY_DONE",
+    "file": "screenshots/60-sales-list.png"
+  },
+  {
+    "id": "61-sale-ready-to-balance",
+    "path": "/sales/sale-4",
+    "role": "data-processing-supervisor",
+    "scenario": "READY_TO_BALANCE",
+    "file": "screenshots/61-sale-ready-to-balance.png"
+  },
+  {
+    "id": "62-sale-validation-showcase",
+    "path": "/sales/sale-5",
+    "role": "data-processing-supervisor",
+    "scenario": "VALIDATION_SHOWCASE",
+    "file": "screenshots/62-sale-validation-showcase.png"
+  },
+  {
+    "id": "63-sale-processed",
+    "path": "/sales/sale-4",
+    "role": "data-processing-supervisor",
+    "scenario": "PROCESSED",
+    "file": "screenshots/63-sale-processed.png"
+  },
+  {
+    "id": "64-approvals-pending",
+    "path": "/sales/sale-4",
+    "role": "data-processing-supervisor",
+    "scenario": "BALANCED",
+    "file": "screenshots/64-approvals-pending.png"
+  },
+  {
+    "id": "70-stop-order-processing-preview",
+    "path": "/finance/stop-order-processing",
+    "role": "data-processing-supervisor",
+    "scenario": "BALANCED",
+    "file": "screenshots/70-stop-order-processing-preview.png"
+  },
+  {
+    "id": "71-stop-order-processing-result",
+    "path": "/finance/stop-order-processing",
+    "role": "data-processing-supervisor",
+    "scenario": "BALANCED",
+    "file": "screenshots/71-stop-order-processing-result.png"
+  },
+  {
+    "id": "72-stop-orders",
+    "path": "/finance/stop-orders",
+    "role": "accounts",
+    "scenario": "PROCESSED",
+    "file": "screenshots/72-stop-orders.png"
+  },
+  {
+    "id": "73-deductions-dashboard",
+    "path": "/finance/deductions",
+    "role": "accounts",
+    "scenario": "PROCESSED",
+    "file": "screenshots/73-deductions-dashboard.png"
+  },
+  {
+    "id": "74-grower-charges",
+    "path": "/finance/grower-charges",
+    "role": "accounts",
+    "scenario": "PROCESSED",
+    "file": "screenshots/74-grower-charges.png"
+  },
+  {
+    "id": "75-sales-sheet",
+    "path": "/finance/sales-sheets",
+    "role": "accounts",
+    "scenario": "PROCESSED",
+    "file": "screenshots/75-sales-sheet.png"
+  },
+  {
+    "id": "76-payments",
+    "path": "/finance/payments",
+    "role": "accounts",
+    "scenario": "PROCESSED",
+    "file": "screenshots/76-payments.png"
+  },
+  {
+    "id": "77-payments-generate-dialog",
+    "path": "/finance/payments",
+    "role": "accounts",
+    "scenario": "PROCESSED",
+    "file": "screenshots/77-payments-generate-dialog.png"
+  },
+  {
+    "id": "78-pay-batch-detail",
+    "path": "/finance/payments/1001",
+    "role": "accounts",
+    "scenario": "PROCESSED",
+    "file": "screenshots/78-pay-batch-detail.png"
+  },
+  {
+    "id": "80-dispatch-floor-initiate",
+    "path": "/floor/dispatch",
+    "role": "dispatch-clerk",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/80-dispatch-floor-initiate.png"
+  },
+  {
+    "id": "81-dispatch-floor-scanning",
+    "path": "/floor/dispatch",
+    "role": "dispatch-clerk",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/81-dispatch-floor-scanning.png"
+  },
+  {
+    "id": "82-dispatch-floor-refused",
+    "path": "/floor/dispatch",
+    "role": "dispatch-clerk",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/82-dispatch-floor-refused.png"
+  },
+  {
+    "id": "83-dispatch-floor-posted",
+    "path": "/floor/dispatch",
+    "role": "demo-operator",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/83-dispatch-floor-posted.png"
+  },
+  {
+    "id": "84-dispatch-notes-list",
+    "path": "/floor/dispatch",
+    "role": "demo-operator",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/84-dispatch-notes-list.png"
+  },
+  {
+    "id": "85-dispatch-note-detail",
+    "path": "/floor/dispatch",
+    "role": "demo-operator",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/85-dispatch-note-detail.png"
+  },
+  {
+    "id": "86-dispatch-shipment-files",
+    "path": "/floor/dispatch",
+    "role": "demo-operator",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/86-dispatch-shipment-files.png"
+  },
+  {
+    "id": "87-dispatch-empty-list",
+    "path": "/dispatch",
+    "role": "dispatch-supervisor",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/87-dispatch-empty-list.png"
+  },
+  {
+    "id": "90-reports-catalogue",
+    "path": "/reports",
+    "role": "supervisor",
+    "scenario": "READY_TO_DISPATCH",
+    "file": "screenshots/90-reports-catalogue.png"
+  },
+  {
+    "id": "91-report-daily-receiving",
+    "path": "/reports/daily-receiving",
+    "role": "supervisor",
+    "scenario": "PROCESSED",
+    "file": "screenshots/91-report-daily-receiving.png"
+  },
+  {
+    "id": "92-report-deductions",
+    "path": "/reports/deduction",
+    "role": "accounts",
+    "scenario": "PROCESSED",
+    "file": "screenshots/92-report-deductions.png"
+  },
+  {
+    "id": "93-admin-users",
+    "path": "/admin/users",
+    "role": "system-admin",
+    "scenario": "PROCESSED",
+    "file": "screenshots/93-admin-users.png"
+  },
+  {
+    "id": "94-admin-roles-matrix",
+    "path": "/admin/roles",
+    "role": "system-admin",
+    "scenario": "FRESH",
+    "file": "screenshots/94-admin-roles-matrix.png"
+  },
+  {
+    "id": "95-admin-audit",
+    "path": "/admin/audit",
+    "role": "system-admin",
+    "scenario": "PROCESSED",
+    "file": "screenshots/95-admin-audit.png"
+  },
+  {
+    "id": "96-admin-settings",
+    "path": "/admin/settings",
+    "role": "system-admin",
+    "scenario": "FRESH",
+    "file": "screenshots/96-admin-settings.png"
+  },
+  {
+    "id": "97-admin-reference-data",
+    "path": "/admin/reference-data",
+    "role": "system-admin",
+    "scenario": "FRESH",
+    "file": "screenshots/97-admin-reference-data.png"
+  },
+  {
+    "id": "98-admin-devices",
+    "path": "/admin/devices",
+    "role": "system-admin",
+    "scenario": "FRESH",
+    "file": "screenshots/98-admin-devices.png"
+  },
+  {
+    "id": "99-tablet-bale-capture",
+    "path": "/floor/receiving/gdn-0000005/bales",
+    "role": "receiving-clerk",
+    "scenario": "RECEIVING_IN_PROGRESS",
+    "file": "screenshots/99-tablet-bale-capture.png"
+  },
+  {
+    "id": "99-tablet-dashboard",
+    "path": "/dashboard",
+    "role": "demo-operator",
+    "scenario": "PROCESSED",
+    "file": "screenshots/99-tablet-dashboard.png"
+  },
+  {
+    "id": "99-tablet-floor-summary",
+    "path": "/floor/floor-summary",
+    "role": "floor-summary-clerk",
+    "scenario": "TICKETS_CONFIRMED",
+    "file": "screenshots/99-tablet-floor-summary.png"
+  },
+  {
+    "id": "99-tablet-sale",
+    "path": "/sales/sale-5",
+    "role": "data-processing-supervisor",
+    "scenario": "VALIDATION_SHOWCASE",
+    "file": "screenshots/99-tablet-sale.png"
+  }
+]

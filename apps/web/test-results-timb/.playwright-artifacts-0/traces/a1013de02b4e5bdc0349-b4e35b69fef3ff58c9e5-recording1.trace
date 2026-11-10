@@ -1,0 +1,1 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.65.0","options":{},"platform":"win32","wallTime":1794259190843,"monotonicTime":8357.186,"sdkLanguage":"javascript","title":"timb.spec.ts:12 › TIMB imports › booking import: sample → validate → preview → confirm → result, then idempotent re-import"}
