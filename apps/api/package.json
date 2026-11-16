@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/main.ts",
     "start": "node --env-file-if-exists=.env dist/main.js",
-    "build": "node scripts/build.mjs",
+    "build": "prisma generate && node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "jest --config jest.config.cjs",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
