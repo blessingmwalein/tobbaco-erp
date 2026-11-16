@@ -57,6 +57,7 @@ export const BUYER_NAV_GROUPS: BuyerNavGroup[] = [
     label: "Operations",
     items: [
       { label: "Bale Receiving", href: "/buyer/receiving", icon: ScanBarcode, permission: "buyer.receiving.view", keywords: "scan receive" },
+      { label: "Incoming Shipments", href: "/buyer/shipments", icon: Truck, permission: "buyer.receiving.view", keywords: "dispatch manifest truck arrival" },
       { label: "Receiving Reconciliation", href: "/buyer/receiving/reconciliation", icon: ClipboardCheck, permission: "buyer.receiving.view" },
       { label: "Warehouse Inventory", href: "/buyer/inventory", icon: Boxes, permission: "buyer.warehouse.view", keywords: "stock bales" },
       { label: "Warehouse Movements", href: "/buyer/movements", icon: ArrowLeftRight, permission: "buyer.warehouse.view", keywords: "transfer move ledger" },

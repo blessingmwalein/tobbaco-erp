@@ -12,3 +12,4 @@ export * from "./returns";
 export * from "./traceability";
 export * from "./reports";
 export * from "./audit";
+export * from "./shipments";

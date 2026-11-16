@@ -57,11 +57,13 @@ type Session = {
   status: string;
   startedAt: string;
   purchase?: { id?: string; reference: string; totalBales: number; receivingStatus: string };
+  shipment?: { id: string; reference: string; status: string; expectedBales: number; expectedMassKg: string; purchase?: { reference: string }; destinationWarehouse?: { code: string; name: string } | null };
   _count?: { scans: number; exceptions: number };
   reconciliation?: { expectedBales?: number; receivedBales?: number; scanned?: number; missingBales?: number } | null;
 };
 
 type SessionDetail = Session & {
+  shipment?: Session["shipment"] & { bales: Array<{ bale: Bale }> };
   purchase?: Session["purchase"] & { bales: Bale[] };
   scans?: Array<{ id: string; barcode: string; result: string; scannedAt: string; bale: Bale | null }>;
   exceptions?: Array<{ id: string; barcode: string; kind: string; explanation: string; status: string; resolution?: string | null }>;
@@ -113,9 +115,9 @@ export default function ReceivingReconciliationPage() {
 
   const columns = useMemo<ColumnDef<Session>[]>(() => [
     { accessorKey: "reference", header: "Session", cell: ({ row }) => <span className="font-medium text-primary">{row.original.reference}</span> },
-    { id: "purchase", header: "Purchase", accessorFn: (row) => row.purchase?.reference ?? "—" },
+    { id: "purchase", header: "Shipment / purchase", accessorFn: (row) => `${row.shipment?.reference ?? "—"} · ${row.purchase?.reference ?? "—"}` },
     { id: "startedAt", header: "Started", accessorFn: (row) => new Date(row.startedAt).getTime(), cell: ({ row }) => new Date(row.original.startedAt).toLocaleString() },
-    { id: "expected", header: "Expected", accessorFn: (row) => row.reconciliation?.expectedBales ?? row.purchase?.totalBales ?? 0 },
+    { id: "expected", header: "Expected", accessorFn: (row) => row.reconciliation?.expectedBales ?? row.shipment?.expectedBales ?? 0 },
     { id: "received", header: "Received", accessorFn: (row) => row.reconciliation?.receivedBales ?? 0 },
     { id: "exceptions", header: "Exceptions", accessorFn: (row) => row._count?.exceptions ?? 0 },
     { accessorKey: "status", header: "Status", cell: ({ row }) => <Badge tone={row.original.status === "ALLOCATED" ? "success" : row.original.status === "CONFIRMED" ? "warning" : "neutral"}>{row.original.status}</Badge> },
@@ -123,7 +125,7 @@ export default function ReceivingReconciliationPage() {
 
   const receivedBales = detail.data?.scans?.filter((scan) => scan.result === "RECEIVED" && scan.bale).map((scan) => scan.bale!) ?? [];
   const receivedBarcodes = new Set(receivedBales.map((bale) => bale.barcode));
-  const missingBales = detail.data?.purchase?.bales.filter((bale) => !receivedBarcodes.has(bale.barcode)) ?? [];
+  const missingBales = detail.data?.shipment?.bales.map((line) => line.bale).filter((bale) => !receivedBarcodes.has(bale.barcode)) ?? [];
   const scanDisputes = detail.data?.scans?.filter((scan) => scan.result !== "RECEIVED") ?? [];
   const openExceptions = detail.data?.exceptions?.filter((exception) => exception.status === "OPEN") ?? [];
   const canConfirm = Boolean(detail.data?.status === "OPEN" && !missingBales.length && !scanDisputes.length && !openExceptions.length);
@@ -283,15 +285,16 @@ function ReconciliationDetail({
   onConfirm: () => void;
   onFinalise: () => void;
 }) {
+  const manifestBales = detail.shipment?.bales.map((line) => line.bale) ?? [];
   return (
     <Card>
       <CardHeader>
         <CardTitle>{detail.reference}</CardTitle>
-        <CardDescription>{detail.purchase?.reference} · Manifest reconciliation</CardDescription>
+        <CardDescription>{detail.shipment?.reference ?? detail.purchase?.reference} · Dispatch manifest reconciliation</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <KeyValue columns={2} items={[
-          { label: "Expected bales", value: detail.purchase?.bales.length ?? detail.purchase?.totalBales },
+          { label: "Expected bales", value: manifestBales.length || detail.shipment?.expectedBales || detail.purchase?.totalBales },
           { label: "Received bales", value: receivedBales.length },
           { label: "Missing bales", value: missingBales.length },
           { label: "Scan disputes", value: scanDisputes.length },
@@ -308,12 +311,12 @@ function ReconciliationDetail({
             </ul>
           </div>
         ) : <div className="rounded-xl border border-success/30 bg-success-soft p-4 text-sm text-success-text">All imported bales match the receiving scans. Choose a warehouse location to confirm.</div>}
-        {detail.purchase?.bales.length ? <div>
+        {manifestBales.length ? <div>
           <h3 className="mb-2 text-sm font-semibold">Imported manifest vs received</h3>
           <div className="max-h-72 overflow-auto rounded-xl border border-border">
             <Table aria-label="Imported manifest reconciliation">
               <TableHeader><TableRow><TableHead>Barcode</TableHead><TableHead>Grade</TableHead><TableHead>Grower / lot</TableHead><TableHead>Scan</TableHead></TableRow></TableHeader>
-              <TableBody>{detail.purchase.bales.map((bale) => <TableRow key={bale.id}><TableCell className="font-mono text-xs">{bale.barcode}</TableCell><TableCell>{bale.buyerGrade}</TableCell><TableCell>{bale.growerNo} / {bale.lotNo}</TableCell><TableCell><Badge tone={receivedBarcodes.has(bale.barcode) ? "success" : "danger"}>{receivedBarcodes.has(bale.barcode) ? "Received" : "Missing"}</Badge></TableCell></TableRow>)}</TableBody>
+              <TableBody>{manifestBales.map((bale) => <TableRow key={bale.id}><TableCell className="font-mono text-xs">{bale.barcode}</TableCell><TableCell>{bale.buyerGrade}</TableCell><TableCell>{bale.growerNo} / {bale.lotNo}</TableCell><TableCell><Badge tone={receivedBarcodes.has(bale.barcode) ? "success" : "danger"}>{receivedBarcodes.has(bale.barcode) ? "Received" : "Missing"}</Badge></TableCell></TableRow>)}</TableBody>
             </Table>
           </div>
         </div> : null}

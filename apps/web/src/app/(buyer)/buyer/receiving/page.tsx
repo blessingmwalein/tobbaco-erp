@@ -7,31 +7,31 @@ import { RequireBuyerPermission } from "@/components/buyer/require-buyer-session
 import { buyerApi, describeError, useBuyerCan, useBuyerMutation, useBuyerQuery } from "@/lib/api";
 import { DataTableCard, LoadingTable, PageIntro } from "../_components/buyer-data";
 
-type Purchase = { id: string; reference: string; totalBales: number; totalMassKg?: string; receivingStatus?: string };
-type Session = { id: string; reference: string; status: string; startedAt: string; purchase?: { id?: string; reference: string; totalBales: number; receivingStatus: string }; _count?: { scans: number; exceptions: number } };
+type Shipment = { id: string; reference: string; status: string; expectedBales: number; expectedMassKg?: string; dispatchDate: string; expectedArrivalAt?: string | null; truckRegistration?: string | null; driverName?: string | null; purchase: { id: string; reference: string; totalBales: number; receivingStatus: string }; destinationWarehouse?: { name: string; code: string } | null };
+type Session = { id: string; reference: string; status: string; startedAt: string; shipment?: Shipment; purchase?: { id?: string; reference: string; totalBales: number; receivingStatus: string }; _count?: { scans: number; exceptions: number } };
 type ScannedBale = { barcode: string; buyerGrade: string; timbGrade: string | null; growerNo: string; lotNo: string; massKg: string; uscPerKg: string; usdValue: string; status: string };
 
 export default function ReceivingPage() {
   const canScan = useBuyerCan()("buyer.receiving.scan");
-  const [purchaseId, setPurchaseId] = useState("");
+  const [shipmentId, setShipmentId] = useState("");
   const [reference, setReference] = useState("");
   const [active, setActive] = useState<Session | null>(null);
   const [barcode, setBarcode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [lastScan, setLastScan] = useState<ScannedBale | null>(null);
-  const purchases = useBuyerQuery<{ items: Purchase[] }>("/buyer/purchases", { page: 1, pageSize: 100 }, { key: ["receiving-purchases"] });
+  const shipments = useBuyerQuery<Shipment[]>("/buyer/shipments", { status: "ARRIVED" }, { key: ["receiving-shipments"] });
   const sessions = useBuyerQuery<Session[]>("/receiving/sessions", undefined, { key: ["receiving/sessions"] });
-  const openSessions = new Map((sessions.data ?? []).filter((session) => session.status === "OPEN" && session.purchase?.id).map((session) => [session.purchase!.id!, session]));
-  const start = useBuyerMutation((body: { purchaseId: string; reference: string }) => buyerApi.post<Session>("/receiving/sessions", body), { invalidate: [["receiving/sessions"], ["purchases"]], toastError: false });
+  const openSessions = new Map((sessions.data ?? []).filter((session) => session.status === "OPEN" && session.shipment?.id).map((session) => [session.shipment!.id, session]));
+  const start = useBuyerMutation((body: { shipmentId: string; reference: string }) => buyerApi.post<Session>("/receiving/sessions", body), { invalidate: [["receiving/sessions"], ["receiving-shipments"], ["purchases"]], toastError: false });
   const scan = useBuyerMutation((body: { id: string; barcode: string }) => buyerApi.post(`/receiving/sessions/${body.id}/scans`, { barcode: body.barcode }), { invalidate: [["receiving/sessions"]], toastError: false });
   const confirm = useBuyerMutation((id: string) => buyerApi.post(`/receiving/sessions/${id}/confirm`), { invalidate: [["receiving/sessions"], ["purchases"]], success: "Receiving session confirmed", toastError: false });
 
   async function begin() {
     setError(null);
-    if (!purchaseId) { setError("Select a purchase before starting the session."); return; }
+    if (!shipmentId) { setError("Select an arrived shipment before starting the session."); return; }
     if (!reference.trim()) { setError("Enter a session reference before starting."); return; }
-    if (openSessions.has(purchaseId)) { setError("This purchase already has an open receiving session. Select it below to continue scanning."); return; }
-    try { const result = await start.mutateAsync({ purchaseId, reference: reference.trim() }); setActive(result); setReference(""); } catch (e) { setError(describeError(e)); }
+    if (openSessions.has(shipmentId)) { setError("This shipment already has an open receiving session. Select it below to continue scanning."); return; }
+    try { const result = await start.mutateAsync({ shipmentId, reference: reference.trim() }); setActive(result); setReference(""); } catch (e) { setError(describeError(e)); }
   }
 
   async function submitScan() {
@@ -59,15 +59,15 @@ export default function ReceivingPage() {
     if (session.status !== "OPEN") return;
     setError(null);
     setActive(session);
-    setPurchaseId(session.purchase?.id ?? "");
+    setShipmentId(session.shipment?.id ?? "");
   }
 
   return <RequireBuyerPermission permission="buyer.receiving.view"><PageIntro title="Bale receiving" description="Start one receiving session per purchase, then continue scanning until the session is confirmed." />
     {error ? <Callout tone="danger" title="Receiving action failed" className="mb-4">{error}</Callout> : null}
     <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
-      <Card><CardHeader><CardTitle>Start a session</CardTitle><CardDescription>Select an unassigned purchase. Purchases with an open session can be continued from the session list.</CardDescription></CardHeader><CardContent className="space-y-4">
-        <Field label="Purchase" htmlFor="receiving-purchase" required hint="Search by purchase reference.">
-          <PurchaseSelector purchases={purchases.data?.items ?? []} selectedId={purchaseId} openSessions={openSessions} disabled={!canScan || Boolean(active)} onSelect={(id) => { setPurchaseId(id); setError(null); }} />
+      <Card><CardHeader><CardTitle>Start a session</CardTitle><CardDescription>Select an arrived shipment. A dispatch must be marked arrived before its bales can be scanned.</CardDescription></CardHeader><CardContent className="space-y-4">
+        <Field label="Arrived shipment" htmlFor="receiving-shipment" required hint="Search by dispatch reference, purchase, or truck.">
+          <ShipmentSelector shipments={shipments.data ?? []} selectedId={shipmentId} openSessions={openSessions} disabled={!canScan || Boolean(active)} onSelect={(id) => { setShipmentId(id); setError(null); }} />
         </Field>
         <Field label="Session reference" htmlFor="receiving-reference" required hint="Use a truck, delivery or docket reference.">
           <Input id="receiving-reference" value={reference} onChange={(e) => setReference(e.target.value)} disabled={!canScan || Boolean(active)} placeholder="e.g. TRUCK-1042" aria-invalid={!reference.trim() && Boolean(error)} />
@@ -92,8 +92,8 @@ function scanResultMessage(result: string): string {
   return `Bale could not be received (${result}).`;
 }
 
-function PurchaseSelector({ purchases, selectedId, openSessions, disabled, onSelect }: { purchases: Purchase[]; selectedId: string; openSessions: Map<string, Session>; disabled: boolean; onSelect: (id: string) => void }) {
+function ShipmentSelector({ shipments, selectedId, openSessions, disabled, onSelect }: { shipments: Shipment[]; selectedId: string; openSessions: Map<string, Session>; disabled: boolean; onSelect: (id: string) => void }) {
   const [open, setOpen] = useState(false);
-  const selected = purchases.find((purchase) => purchase.id === selectedId);
-  return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><Button id="receiving-purchase" type="button" variant="secondary" role="combobox" aria-expanded={open} disabled={disabled} className="w-full justify-between font-normal">{selected ? <span className="truncate">{selected.reference} · {selected.totalBales} bales</span> : <span className="text-muted-foreground">Search purchases...</span>}<ChevronDown className="size-4 shrink-0" /></Button></PopoverTrigger><PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0"><Command><CommandInput placeholder="Search reference..." /><CommandList><CommandEmpty>No purchases found.</CommandEmpty>{purchases.map((purchase) => { const openSession = openSessions.get(purchase.id); return <CommandItem key={purchase.id} value={`${purchase.reference} ${purchase.id}`} onSelect={() => { onSelect(purchase.id); setOpen(false); }}><Check className={`size-4 ${selectedId === purchase.id ? "opacity-100" : "opacity-0"}`} /><span className="min-w-0 flex-1 truncate">{purchase.reference} · {purchase.totalBales} bales</span>{openSession ? <Badge tone="warning">Open</Badge> : null}</CommandItem>; })}</CommandList></Command></PopoverContent></Popover>;
+  const selected = shipments.find((shipment) => shipment.id === selectedId);
+  return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><Button id="receiving-shipment" type="button" variant="secondary" role="combobox" aria-expanded={open} disabled={disabled} className="w-full justify-between font-normal">{selected ? <span className="truncate">{selected.reference} · {selected.expectedBales} bales</span> : <span className="text-muted-foreground">Search arrived shipments...</span>}<ChevronDown className="size-4 shrink-0" /></Button></PopoverTrigger><PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0"><Command><CommandInput placeholder="Search dispatch, purchase, or truck..." /><CommandList><CommandEmpty>No arrived shipments found.</CommandEmpty>{shipments.map((shipment) => { const openSession = openSessions.get(shipment.id); return <CommandItem key={shipment.id} value={`${shipment.reference} ${shipment.purchase.reference} ${shipment.truckRegistration ?? ""} ${shipment.id}`} onSelect={() => { onSelect(shipment.id); setOpen(false); }}><Check className={`size-4 ${selectedId === shipment.id ? "opacity-100" : "opacity-0"}`} /><span className="min-w-0 flex-1 truncate">{shipment.reference} · {shipment.purchase.reference} · {shipment.expectedBales} bales</span>{openSession ? <Badge tone="warning">Open</Badge> : null}</CommandItem>; })}</CommandList></Command></PopoverContent></Popover>;
 }

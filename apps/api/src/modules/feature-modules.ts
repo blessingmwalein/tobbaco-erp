@@ -13,6 +13,7 @@ import { ReturnsModule } from "./returns/returns.module";
 import { StaffModule } from "./staff/staff.module";
 import { TraceabilityModule } from "./traceability/traceability.module";
 import { WarehousesModule } from "./warehouses/warehouses.module";
+import { ShipmentsModule } from "./shipments/shipments.module";
 
 /**
  * Registry of feature modules. Every module slot is registered here up front so parallel workstreams only ever edit
@@ -27,6 +28,7 @@ export const FEATURE_MODULES: Type<unknown>[] = [
   PurchasesModule, // Stage 2: invoices, purchases, bale manifests
   ReceivingModule, // Stage 3: receiving sessions, scans, reconciliation
   WarehousesModule, // Stage 4: warehouses / bays / rows / inventory
+  ShipmentsModule, // Buyer dispatch manifests, arrivals, and incoming shipments
   MovementsModule, // Stage 4: movements ledger + transfers
   ProcessingModule, // Stage 5: processing companies + dispatches
   ReturnsModule, // Stage 6: processing returns + processing warehouse

@@ -21,7 +21,7 @@ export class ReceivingService {
     return db.receivingSession.findMany({
       where: { status: query.status as any, purchaseId: query.purchaseId, },
       orderBy: { startedAt: "desc" },
-      include: { purchase: { select: { id: true, reference: true, totalBales: true, totalMassKg: true, receivingStatus: true } }, _count: { select: { scans: true, exceptions: true } } },
+      include: { shipment: { select: { id: true, reference: true, status: true, expectedBales: true, expectedMassKg: true, purchase: { select: { id: true, reference: true } }, destinationWarehouse: { select: { code: true, name: true } } } }, purchase: { select: { id: true, reference: true, totalBales: true, totalMassKg: true, receivingStatus: true } }, _count: { select: { scans: true, exceptions: true } } },
     });
   }
 
@@ -35,6 +35,15 @@ export class ReceivingService {
           include: { bale: { select: { id: true, barcode: true, buyerGrade: true, timbGrade: true, growerNo: true, lotNo: true, massKg: true, uscPerKg: true, usdValue: true, status: true, currentWarehouseId: true, currentBayId: true, currentRowId: true } } },
         },
         exceptions: { orderBy: { raisedAt: "desc" } },
+        shipment: {
+          include: {
+            bales: {
+              include: { bale: { select: { id: true, barcode: true, buyerGrade: true, timbGrade: true, growerNo: true, lotNo: true, massKg: true, uscPerKg: true, usdValue: true, status: true, currentWarehouseId: true, currentBayId: true, currentRowId: true } } },
+              orderBy: { id: "asc" },
+            },
+            destinationWarehouse: { select: { id: true, code: true, name: true } },
+          },
+        },
         purchase: {
           select: {
             id: true,
@@ -54,13 +63,17 @@ export class ReceivingService {
     return session;
   }
 
-  async start(principal: BuyerPrincipal, input: { purchaseId: string; reference: string; defaultWarehouseId?: string; defaultBayId?: string; defaultRowId?: string; notes?: string }, meta: RequestMeta) {
+  async start(principal: BuyerPrincipal, input: { shipmentId: string; purchaseId?: string; reference: string; defaultWarehouseId?: string; defaultBayId?: string; defaultRowId?: string; notes?: string }, meta: RequestMeta) {
     const created = await this.prisma.tenantTransaction(principal.organisationId, async (tx) => {
-      const purchase = await tx.purchase.findUnique({ where: { id: input.purchaseId } });
+      const shipment = await tx.buyerShipment.findUnique({ where: { id: input.shipmentId } });
+      if (!shipment) throw AppError.notFound("Shipment");
+      if (shipment.status !== "ARRIVED" && shipment.status !== "RECEIVING") throw AppError.conflict("SHIPMENT_NOT_ARRIVED", "The shipment must be marked as arrived before receiving can start");
+      const purchase = await tx.purchase.findUnique({ where: { id: shipment.purchaseId } });
       if (!purchase) throw AppError.notFound("Purchase");
-      const openSession = await tx.receivingSession.findFirst({ where: { purchaseId: purchase.id, status: "OPEN" }, select: { reference: true } });
+      const openSession = await tx.receivingSession.findFirst({ where: { shipmentId: shipment.id, status: "OPEN" }, select: { reference: true } });
       if (openSession) throw AppError.conflict("PURCHASE_SESSION_OPEN", `Purchase already has an open receiving session (${openSession.reference})`);
-      const session = await tx.receivingSession.create({ data: { buyerOrganisationId: principal.organisationId, purchaseId: purchase.id, reference: input.reference, startedById: principal.id, defaultWarehouseId: input.defaultWarehouseId ?? null, defaultBayId: input.defaultBayId ?? null, defaultRowId: input.defaultRowId ?? null, notes: input.notes ?? null } });
+      const session = await tx.receivingSession.create({ data: { buyerOrganisationId: principal.organisationId, purchaseId: purchase.id, shipmentId: shipment.id, reference: input.reference, startedById: principal.id, defaultWarehouseId: input.defaultWarehouseId ?? null, defaultBayId: input.defaultBayId ?? null, defaultRowId: input.defaultRowId ?? null, notes: input.notes ?? null } });
+      await tx.buyerShipment.update({ where: { id: shipment.id }, data: { status: "RECEIVING" } });
       await tx.purchase.update({ where: { id: purchase.id }, data: { receivingStatus: "IN_PROGRESS" } });
       await this.audit.record(tx, principal, { action: "receiving.session.created", entityType: "ReceivingSession", entityId: session.id, entityRef: session.reference, next: input, organisationId: principal.organisationId }, meta);
       return session;
@@ -70,9 +83,10 @@ export class ReceivingService {
 
   async scan(principal: BuyerPrincipal, sessionId: string, input: { barcode: string; massKg?: string; warehouseId?: string; bayId?: string; rowId?: string; note?: string }, meta: RequestMeta) {
     return this.prisma.tenantTransaction(principal.organisationId, async (tx) => {
-      const session = await tx.receivingSession.findUnique({ where: { id: sessionId } });
+      const session = await tx.receivingSession.findUnique({ where: { id: sessionId }, include: { shipment: { include: { bales: { include: { bale: true } } } } } });
       if (!session) throw AppError.notFound("Receiving session");
       if (session.status !== "OPEN") throw AppError.conflict("SESSION_CLOSED", "This receiving session is no longer open");
+      if (!session.shipment) throw AppError.conflict("SHIPMENT_REQUIRED", "This receiving session is not linked to a shipment");
       const raw = input.barcode;
       const checked = checkTicketBarcode(raw);
       let result: any = checked.valid ? "UNEXPECTED" : "INVALID_BARCODE";
@@ -82,42 +96,45 @@ export class ReceivingService {
         if (!bale) result = "UNEXPECTED";
         else if (bale.buyerOrganisationId !== principal.organisationId) result = "WRONG_BUYER";
         else if (bale.purchaseId !== session.purchaseId) result = "WRONG_PURCHASE";
-        else if (bale.status !== "EXPECTED") result = "DUPLICATE_SCAN";
+        else if (!session.shipment.bales.some((line) => line.baleId === bale.id)) result = "UNEXPECTED";
+        else if (bale.status !== "DISPATCHED" && bale.status !== "EXPECTED") result = "DUPLICATE_SCAN";
         else result = "RECEIVED";
       }
       if (result === "DUPLICATE_SCAN") throw AppError.conflict("DUPLICATE_SCAN", "Bale already scanned");
-      let location: any = null;
       if (result === "RECEIVED") {
-        const warehouseId = input.warehouseId ?? session.defaultWarehouseId;
-        if (warehouseId) location = await this.ledger.resolveLocation(tx, { warehouseId, bayId: input.bayId ?? session.defaultBayId, rowId: input.rowId ?? session.defaultRowId }, { kind: "STANDARD" });
-        await this.ledger.receive(makeLedgerCtx(tx, principal), bale, { session: { type: "RECEIVING_SESSION", id: session.id, label: session.reference }, location, massKg: input.massKg });
+        await this.ledger.receive(makeLedgerCtx(tx, principal), bale, { session: { type: "RECEIVING_SESSION", id: session.id, label: session.reference }, location: null, massKg: input.massKg });
       }
-      const scan = await tx.receivingScan.create({ data: { sessionId: session.id, buyerOrganisationId: principal.organisationId, barcode: raw, result, baleId: bale?.id ?? null, massKg: input.massKg ?? null, warehouseId: location?.warehouseId ?? null, bayId: location?.bayId ?? null, rowId: location?.rowId ?? null, scannedById: principal.id, note: input.note ?? null } });
+      const scan = await tx.receivingScan.create({ data: { sessionId: session.id, buyerOrganisationId: principal.organisationId, barcode: raw, result, baleId: bale?.id ?? null, massKg: input.massKg ?? null, warehouseId: null, bayId: null, rowId: null, scannedById: principal.id, note: input.note ?? null } });
+      if (result === "RECEIVED" && bale) await tx.buyerShipmentBale.update({ where: { shipmentId_baleId: { shipmentId: session.shipment.id, baleId: bale.id } }, data: { status: "RECEIVED", receivedAt: new Date() } });
       if (result !== "RECEIVED") await tx.receivingException.create({ data: { buyerOrganisationId: principal.organisationId, sessionId: session.id, scanId: scan.id, baleId: bale?.id ?? null, barcode: raw, kind: result, explanation: input.note ?? `Scan rejected: ${result}`, raisedById: principal.id } });
       await this.audit.record(tx, principal, { action: `receiving.scan.${String(result).toLowerCase()}`, entityType: "ReceivingScan", entityId: scan.id, entityRef: raw, next: { result, baleId: bale?.id ?? null }, organisationId: principal.organisationId }, meta);
-      return { scan, bale, location };
+      return { scan, bale, location: null };
     });
   }
 
   async confirm(principal: BuyerPrincipal, sessionId: string, meta: RequestMeta) {
     return this.prisma.tenantTransaction(principal.organisationId, async (tx) => {
-      const session = await tx.receivingSession.findUnique({ where: { id: sessionId }, include: { purchase: { include: { bales: { orderBy: { barcode: "asc" } } } }, scans: { where: { result: "RECEIVED", voidedAt: null }, include: { bale: true }, orderBy: { scannedAt: "asc" } }, exceptions: { where: { status: "OPEN" } } } });
+      const session = await tx.receivingSession.findUnique({ where: { id: sessionId }, include: { shipment: { include: { bales: { include: { bale: true } } } }, purchase: { include: { bales: { orderBy: { barcode: "asc" } } } }, scans: { where: { result: "RECEIVED", voidedAt: null }, include: { bale: true }, orderBy: { scannedAt: "asc" } }, exceptions: { where: { status: "OPEN" } } } });
       if (!session) throw AppError.notFound("Receiving session");
       if (session.status !== "OPEN") throw AppError.conflict("SESSION_CLOSED", "This receiving session is no longer open");
+      if (!session.shipment) throw AppError.conflict("SHIPMENT_REQUIRED", "This receiving session is not linked to a shipment");
       const receivedBales = session.scans.map((scan) => scan.bale).filter((bale): bale is NonNullable<typeof bale> => Boolean(bale));
-      const expectedBarcodes = new Set(session.purchase.bales.map((bale) => bale.barcode));
+      const expectedBarcodes = new Set(session.shipment.bales.map((line) => line.bale.barcode));
       const receivedBarcodes = new Set(receivedBales.map((bale) => bale.barcode));
-      const missingBarcodes = session.purchase.bales.filter((bale) => !receivedBarcodes.has(bale.barcode)).map((bale) => bale.barcode);
-      if (session.exceptions.length || missingBarcodes.length || receivedBales.length !== session.purchase.totalBales) {
-        throw AppError.conflict("RECONCILIATION_UNRESOLVED", "Resolve all receiving exceptions and receive every imported bale before confirmation");
+      const missingBarcodes = session.shipment.bales.filter((line) => !receivedBarcodes.has(line.bale.barcode)).map((line) => line.bale.barcode);
+      if (session.exceptions.length || missingBarcodes.length || receivedBales.length !== session.shipment.expectedBales) {
+        await tx.buyerShipment.update({ where: { id: session.shipment.id }, data: { status: "RECONCILIATION_REQUIRED" } });
+        throw AppError.conflict("RECONCILIATION_UNRESOLVED", "Resolve all receiving exceptions and receive every dispatched bale before confirmation");
       }
       if (receivedBales.some((bale) => !expectedBarcodes.has(bale.barcode))) {
         throw AppError.conflict("RECONCILIATION_MISMATCH", "One or more received bales are not on the purchase manifest");
       }
       const received = receivedBales.length;
       const scans = await tx.receivingScan.count({ where: { sessionId } });
-      const reconciliation = { expectedBales: session.purchase.totalBales, receivedBales: received, scanned: scans, missingBales: 0, confirmedAt: new Date().toISOString() };
+      const reconciliation = { expectedBales: session.shipment.expectedBales, receivedBales: received, scanned: scans, missingBales: 0, confirmedAt: new Date().toISOString(), shipmentId: session.shipment.id };
       const updated = await tx.receivingSession.update({ where: { id: sessionId }, data: { status: "CONFIRMED", confirmedById: principal.id, confirmedAt: new Date(), reconciliation: reconciliation as Prisma.InputJsonValue } });
+      await tx.buyerShipment.update({ where: { id: session.shipment.id }, data: { status: "CONFIRMED", confirmedAt: new Date() } });
+      await tx.purchase.update({ where: { id: session.purchase.id }, data: { receivingStatus: "PARTIALLY_RECEIVED" } });
       await this.audit.record(tx, principal, { action: "receiving.session.confirmed", entityType: "ReceivingSession", entityId: sessionId, entityRef: session.reference, next: reconciliation, organisationId: principal.organisationId }, meta);
       return updated;
     });
@@ -125,9 +142,10 @@ export class ReceivingService {
 
   async finalise(principal: BuyerPrincipal, sessionId: string, input: { warehouseId: string; bayId: string; startingRowId: string }, meta: RequestMeta) {
     return this.prisma.tenantTransaction(principal.organisationId, async (tx) => {
-      const session = await tx.receivingSession.findUnique({ where: { id: sessionId }, include: { purchase: { include: { bales: { orderBy: { barcode: "asc" } } } }, scans: { where: { result: "RECEIVED", voidedAt: null }, include: { bale: true }, orderBy: { scannedAt: "asc" } } } });
+      const session = await tx.receivingSession.findUnique({ where: { id: sessionId }, include: { shipment: { include: { bales: true } }, purchase: { include: { bales: { orderBy: { barcode: "asc" } } } }, scans: { where: { result: "RECEIVED", voidedAt: null }, include: { bale: true }, orderBy: { scannedAt: "asc" } } } });
       if (!session) throw AppError.notFound("Receiving session");
       if (session.status !== "CONFIRMED") throw AppError.conflict("SESSION_NOT_CONFIRMED", "Confirm the reconciliation before finalising warehouse allocation");
+      if (!session.shipment || session.shipment.status !== "CONFIRMED") throw AppError.conflict("SHIPMENT_NOT_CONFIRMED", "The shipment must be confirmed before warehouse allocation");
       const receivedBales = session.scans.map((scan) => scan.bale).filter((bale): bale is NonNullable<typeof bale> => Boolean(bale));
       const warehouse = await tx.warehouse.findUnique({ where: { id: input.warehouseId }, include: { bays: { where: { id: input.bayId, active: true }, include: { rows: { where: { active: true }, orderBy: { code: "asc" } } } } } });
       const bay = warehouse?.bays[0];
@@ -148,11 +166,14 @@ export class ReceivingService {
         const row = locations.get(assignment.rowId)!;
         const location = await this.ledger.resolveLocation(tx, { warehouseId: warehouse.id, bayId: bay.id, rowId: row.id }, { kind: "STANDARD" });
         const current = assignment.bale.currentWarehouseId === location.warehouseId && assignment.bale.currentBayId === location.bayId && assignment.bale.currentRowId === location.rowId;
-        if (!current) await this.ledger.place(makeLedgerCtx(tx, principal), assignment.bale.id, location, { reason: "Receiving reconciliation confirmed", ref: { type: "RECEIVING_SESSION", id: session.id, label: session.reference } });
+        if (!current) await this.ledger.place(makeLedgerCtx(tx, principal), assignment.bale.id, location, { reason: "Receiving shipment allocated", ref: { type: "RECEIVING_SESSION", id: session.id, label: session.reference } });
       }
       const reconciliation = { ...(session.reconciliation as Record<string, unknown> | null), warehouseId: warehouse.id, bayId: bay.id, startingRowId: input.startingRowId, allocatedAt: new Date().toISOString() };
       const updated = await tx.receivingSession.update({ where: { id: sessionId }, data: { status: "ALLOCATED", reconciliation: reconciliation as Prisma.InputJsonValue } });
-      await tx.purchase.update({ where: { id: session.purchase.id }, data: { receivingStatus: "COMPLETE" } });
+      await tx.buyerShipmentBale.updateMany({ where: { shipmentId: session.shipment.id }, data: { status: "ALLOCATED", allocatedAt: new Date() } });
+      await tx.buyerShipment.update({ where: { id: session.shipment.id }, data: { status: "ALLOCATED", allocatedAt: new Date() } });
+      const allocated = await tx.buyerShipmentBale.count({ where: { shipment: { purchaseId: session.purchase.id }, status: "ALLOCATED" } });
+      await tx.purchase.update({ where: { id: session.purchase.id }, data: { receivingStatus: allocated === session.purchase.totalBales ? "COMPLETE" : "PARTIALLY_RECEIVED" } });
       await this.audit.record(tx, principal, { action: "receiving.session.allocated", entityType: "ReceivingSession", entityId: sessionId, entityRef: session.reference, next: reconciliation, organisationId: principal.organisationId }, meta);
       return updated;
     });

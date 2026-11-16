@@ -91,7 +91,9 @@ enum BaleStatus {
 
 enum PurchaseReceivingStatus {
   NOT_STARTED
+  PARTIALLY_DISPATCHED
   IN_PROGRESS
+  PARTIALLY_RECEIVED
   PARTIAL
   COMPLETE
 }
@@ -100,6 +102,30 @@ enum ReceivingSessionStatus {
   OPEN
   CONFIRMED
   ALLOCATED
+  CANCELLED
+}
+
+enum BuyerShipmentStatus {
+  IN_TRANSIT
+  ARRIVED
+  RECEIVING
+  RECONCILIATION_REQUIRED
+  CONFIRMED
+  STORAGE_IN_PROGRESS
+  ALLOCATED
+  CANCELLED
+}
+
+enum BuyerShipmentBaleStatus {
+  EXPECTED
+  RECEIVED
+  ALLOCATED
+  MISSING
+}
+
+enum BuyerShipmentImportStatus {
+  STAGED
+  COMPLETED
   CANCELLED
 }
 
@@ -223,6 +249,8 @@ model BuyerOrganisation {
   processingCompanies ProcessingCompany[]
   dispatches         Dispatch[]
   returns            ProcessingReturn[]
+  shipments          BuyerShipment[]
+  shipmentImports    BuyerShipmentImport[]
 
   @@map("buyer_organisations")
 }
@@ -476,6 +504,7 @@ model Purchase {
   import       FlowDiskImport?
   bales        Bale[]
   sessions     ReceivingSession[]
+  shipments    BuyerShipment[]
 
   @@unique([buyerOrganisationId, reference])
   @@index([buyerOrganisationId, saleDate])
@@ -517,6 +546,7 @@ model Bale {
   movements        BaleMovement[]
   scans            ReceivingScan[]
   dispatchBales    DispatchBale[]
+  shipmentBales    BuyerShipmentBale[]
   lineageAsOriginal BaleLineage[]    @relation("OriginalBale")
   lineageAsNew     BaleLineage[]     @relation("NewBale")
 
@@ -534,6 +564,7 @@ model ReceivingSession {
   id                  String                 @id @default(uuid()) @db.Uuid
   buyerOrganisationId String                 @db.Uuid
   purchaseId          String                 @db.Uuid
+  shipmentId          String?                @db.Uuid
   reference           String
   status              ReceivingSessionStatus @default(OPEN)
   startedById         String                 @db.Uuid
@@ -551,11 +582,13 @@ model ReceivingSession {
 
   organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
   purchase     Purchase          @relation(fields: [purchaseId], references: [id])
+  shipment     BuyerShipment?   @relation(fields: [shipmentId], references: [id])
   scans        ReceivingScan[]
   exceptions   ReceivingException[]
 
   @@unique([buyerOrganisationId, reference])
   @@index([buyerOrganisationId, purchaseId, status])
+  @@index([shipmentId])
   @@map("receiving_sessions")
 }
 
@@ -611,6 +644,91 @@ model ReceivingException {
   @@map("receiving_exceptions")
 }
 
+model BuyerShipment {
+  id                    String              @id @default(uuid()) @db.Uuid
+  buyerOrganisationId   String              @db.Uuid
+  purchaseId            String              @db.Uuid
+  reference             String
+  dispatchDate          DateTime            @db.Date
+  dispatchLocation      String?
+  destinationWarehouseId String             @db.Uuid
+  expectedArrivalAt     DateTime?
+  truckRegistration     String
+  trailerRegistration   String?
+  driverName            String
+  driverPhone           String?
+  transporter           String?
+  notes                 String?
+  status                BuyerShipmentStatus @default(IN_TRANSIT)
+  expectedBales         Int
+  expectedMassKg        Decimal             @db.Decimal(12, 1)
+  arrivedAt             DateTime?
+  arrivedById           String?             @db.Uuid
+  actualTruckRegistration String?
+  arrivalNotes          String?
+  confirmedAt           DateTime?
+  allocatedAt           DateTime?
+  createdById           String              @db.Uuid
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  purchase     Purchase          @relation(fields: [purchaseId], references: [id])
+  destinationWarehouse Warehouse @relation(fields: [destinationWarehouseId], references: [id])
+  bales        BuyerShipmentBale[]
+  sessions     ReceivingSession[]
+  imports      BuyerShipmentImport[]
+
+  @@unique([buyerOrganisationId, reference])
+  @@index([buyerOrganisationId, status])
+  @@index([purchaseId, status])
+  @@map("buyer_shipments")
+}
+
+model BuyerShipmentBale {
+  id                  String                @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String                @db.Uuid
+  shipmentId          String                @db.Uuid
+  baleId              String                @db.Uuid
+  massKgAtDispatch    Decimal               @db.Decimal(10, 1)
+  status              BuyerShipmentBaleStatus @default(EXPECTED)
+  receivedAt          DateTime?
+  allocatedAt         DateTime?
+
+  shipment BuyerShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  bale     Bale          @relation(fields: [baleId], references: [id])
+
+  @@unique([shipmentId, baleId])
+  @@unique([baleId])
+  @@index([buyerOrganisationId, status])
+  @@index([shipmentId, status])
+  @@map("buyer_shipment_bales")
+}
+
+model BuyerShipmentImport {
+  id                    String                    @id @default(uuid()) @db.Uuid
+  buyerOrganisationId   String                    @db.Uuid
+  reference             String
+  filename              String
+  content               String
+  metadata              Json
+  rows                  Json
+  recordCount           Int
+  validCount            Int
+  invalidCount          Int
+  status                BuyerShipmentImportStatus @default(STAGED)
+  shipmentId            String?                   @db.Uuid
+  createdAt             DateTime                  @default(now())
+  confirmedAt           DateTime?
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  shipment     BuyerShipment?    @relation(fields: [shipmentId], references: [id])
+
+  @@unique([buyerOrganisationId, reference])
+  @@index([buyerOrganisationId, status])
+  @@map("buyer_shipment_imports")
+}
+
 // ── Warehouses: Buyer → Warehouse → Bay → Row → Bale ──────────────────────────
 model Warehouse {
   id                  String        @id @default(uuid()) @db.Uuid
@@ -625,6 +743,7 @@ model Warehouse {
   organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
   bays         Bay[]
   bales        Bale[]
+  incomingShipments BuyerShipment[]
 
   @@unique([buyerOrganisationId, code])
   @@map("warehouses")
