@@ -1,0 +1,16 @@
+{
+  "extends": "@tobacco/config/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node", "jest"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": false,
+    "strictPropertyInitialization": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "test", "prisma", "scripts", "*.cjs"],
+  "exclude": ["node_modules", "dist"]
+}

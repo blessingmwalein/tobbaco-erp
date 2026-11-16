@@ -1,4 +1,5 @@
 export * from "./barcode";
+export * from "./buyer";
 export * from "./enums";
 export * from "./format";
 export * from "./messages";

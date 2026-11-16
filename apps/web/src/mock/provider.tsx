@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster, TooltipProvider } from "@tobacco/ui";
 import { Leaf } from "lucide-react";
@@ -33,6 +34,9 @@ export function MockProvider({ children }: { children: ReactNode }) {
       }),
   );
   const [ready, setReady] = useState(false);
+  // The external Buyer Portal talks to the real API and never reads the mock database,
+  // so it must not wait for (or show) the "Loading demo data" screen.
+  const external = usePathname().startsWith("/buyer");
 
   useEffect(() => {
     const db = getDb();
@@ -55,7 +59,7 @@ export function MockProvider({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      <TooltipProvider delayDuration={200}>{ready ? children : <BootScreen />}</TooltipProvider>
+      <TooltipProvider delayDuration={200}>{ready || external ? children : <BootScreen />}</TooltipProvider>
       <Toaster />
     </QueryClientProvider>
   );

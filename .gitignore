@@ -15,3 +15,7 @@ next-env.d.ts
 playwright-report
 test-results
 apps/web/e2e/.auth
+
+# API
+.storage
+apps/api/dist

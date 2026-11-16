@@ -1,0 +1,62 @@
+{
+  "name": "@tobacco/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tobacco ERP API — NestJS modular monolith (Buyer Portal first). Prisma + Neon PostgreSQL.",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/main.ts",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --config jest.config.cjs",
+    "test:integration": "jest --config jest.integration.config.cjs --runInBand",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
+    "local:setup": "prisma migrate deploy && pnpm db:seed && pnpm samples",
+    "e2e:reset": "tsx --env-file-if-exists=.env scripts/e2e-reset.ts",
+    "env:init": "node scripts/init-env.mjs",
+    "samples": "tsx scripts/generate-sample-flowdisk.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.2.9",
+    "@nestjs/core": "11.2.9",
+    "@nestjs/jwt": "11.0.2",
+    "@nestjs/platform-express": "11.2.9",
+    "@nestjs/swagger": "11.4.8",
+    "@nestjs/throttler": "6.7.1",
+    "@node-rs/argon2": "2.2.2",
+    "@prisma/client": "6.19.3",
+    "@tobacco/shared": "workspace:*",
+    "@tobacco/validation": "workspace:*",
+    "exceljs": "4.4.0",
+    "helmet": "8.3.0",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "3.11.174",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "11.2.9",
+    "@tobacco/config": "workspace:*",
+    "@types/express": "5.0.6",
+    "@types/jest": "29.5.14",
+    "@types/multer": "2.3.0",
+    "@types/node": "24.19.2",
+    "@types/supertest": "7.2.1",
+    "esbuild": "0.25.12",
+    "jest": "29.7.0",
+    "prisma": "6.19.3",
+    "supertest": "7.3.2",
+    "ts-jest": "29.4.15",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

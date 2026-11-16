@@ -1,0 +1,882 @@
+// Buyer Portal data model (Neon PostgreSQL).
+//
+// Integrity principles (see docs/architecture/adr-0007…0009):
+//  - Every buyer-owned row carries buyerOrganisationId; the API scopes ALL buyer queries by it (tenant guard + Prisma extension).
+//  - BaleEvent and BaleMovement are IMMUTABLE ledgers (DB triggers reject UPDATE/DELETE — see the custom migration SQL).
+//    Bale.status / current location are a projection updated in the same transaction as the event.
+//  - Money and weights are Decimal — never floats. Barcodes are VarChar(10): the Code 39 mod-43 check character can be a
+//    SPACE, so values must never be trimmed.
+//  - Partial unique indexes (custom SQL): one open dispatch per bale, one non-voided receipt per bale, one active import per file.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // Neon pooled connection (pgbouncer)
+  directUrl = env("DIRECT_URL") // Neon direct connection (migrations)
+}
+
+// ── Enums (mirror packages/shared/src/buyer/enums.ts) ──────────────────────────
+enum PrincipalType {
+  STAFF
+  BUYER
+}
+
+enum StaffRole {
+  ADMIN
+}
+
+enum BuyerOrgStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BuyerRole {
+  BUYER_ADMINISTRATOR
+  WAREHOUSE_MANAGER
+  OPERATIONS_OFFICER
+  FINANCE_OFFICER
+  VIEWER
+}
+
+enum OneTimeTokenKind {
+  PASSWORD_RESET
+  ACCOUNT_ACTIVATION
+}
+
+enum DocumentKind {
+  FLOW_DISK
+  INVOICE_PDF
+  DISPATCH_DOCUMENT
+  RECONCILIATION_REPORT
+  OTHER
+}
+
+enum FlowDiskImportStatus {
+  STAGED
+  COMPLETED
+  REJECTED_DUPLICATE
+  FAILED
+  CANCELLED
+}
+
+enum ImportIssueSeverity {
+  ERROR
+  WARNING
+}
+
+enum ImportIssueKind {
+  INVALID_RECORD
+  DUPLICATE_BARCODE
+  MISSING_BARCODE
+  INVALID_BARCODE_CHECK
+  MISSING_GROWER
+  MISSING_LOT
+  INVALID_MASS
+  INVALID_VALUE
+  VALUE_MISMATCH
+  EXISTING_BALE
+}
+
+enum BaleStatus {
+  EXPECTED
+  IN_STOCK
+  DISPATCHED
+  RETURNED
+  EXCEPTION
+  SUPERSEDED
+}
+
+enum PurchaseReceivingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PARTIAL
+  COMPLETE
+}
+
+enum ReceivingSessionStatus {
+  OPEN
+  CONFIRMED
+  ALLOCATED
+  CANCELLED
+}
+
+enum ScanResult {
+  RECEIVED
+  UNEXPECTED
+  DUPLICATE_SCAN
+  WRONG_BUYER
+  WRONG_PURCHASE
+  INVALID_BARCODE
+  EXCEPTION
+}
+
+enum ExceptionStatus {
+  OPEN
+  RESOLVED
+}
+
+enum WarehouseKind {
+  STANDARD
+  PROCESSING
+}
+
+enum MovementType {
+  STORE
+  MOVE
+  TRANSFER
+  DISPATCH_OUT
+  RETURN_IN
+}
+
+enum MovementRefType {
+  RECEIVING_SESSION
+  DISPATCH
+  RETURN
+  MANUAL
+}
+
+enum BaleEventType {
+  PURCHASED
+  IMPORTED
+  RECEIVED
+  STORED
+  MOVED
+  DISPATCHED
+  RETURNED
+  RE_IDENTIFIED
+  EXCEPTION_FLAGGED
+  EXCEPTION_RESOLVED
+  CORRECTION
+}
+
+enum DispatchStatus {
+  DISPATCHED
+  PARTIALLY_RETURNED
+  RETURNED
+  CLOSED
+}
+
+enum DispatchBaleStatus {
+  OUTSTANDING
+  RETURNED
+  REPLACED
+  MISSING
+}
+
+enum ReturnStatus {
+  OPEN
+  CONFIRMED
+  CANCELLED
+}
+
+enum ReturnOutcome {
+  RETURNED
+  DAMAGED
+  REGRADED
+  REIDENTIFIED
+  UNEXPECTED
+  MISSING
+}
+
+// ── Identity ──────────────────────────────────────────────────────────────────
+model StaffUser {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         StaffRole @default(ADMIN)
+  active       Boolean   @default(true)
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("staff_users")
+}
+
+model BuyerOrganisation {
+  id             String         @id @default(uuid()) @db.Uuid
+  /// Buyer code as used on the auction floor (e.g. MZ).
+  code           String         @unique
+  name           String
+  registrationNo String?
+  address        String?
+  contactPerson  String?
+  phone          String?
+  email          String?
+  status         BuyerOrgStatus @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  users              BuyerUser[]
+  documents          Document[]
+  imports            FlowDiskImport[]
+  invoices           BuyerInvoice[]
+  purchases          Purchase[]
+  bales              Bale[]
+  receivingSessions  ReceivingSession[]
+  warehouses         Warehouse[]
+  processingCompanies ProcessingCompany[]
+  dispatches         Dispatch[]
+  returns            ProcessingReturn[]
+
+  @@map("buyer_organisations")
+}
+
+model BuyerUser {
+  id                  String      @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String      @db.Uuid
+  email               String      @unique
+  name                String
+  /// Null until the user activates their account.
+  passwordHash        String?
+  roles               BuyerRole[]
+  active              Boolean     @default(true)
+  failedLogins        Int         @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+
+  @@index([buyerOrganisationId])
+  @@map("buyer_users")
+}
+
+model RefreshToken {
+  id            String        @id @default(uuid()) @db.Uuid
+  principalType PrincipalType
+  principalId   String        @db.Uuid
+  tokenHash     String        @unique
+  /// Rotation family: reuse of a revoked token revokes the whole family.
+  familyId      String        @db.Uuid
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  userAgent     String?
+  ip            String?
+
+  @@index([principalType, principalId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model OneTimeToken {
+  id            String           @id @default(uuid()) @db.Uuid
+  kind          OneTimeTokenKind
+  principalType PrincipalType
+  principalId   String           @db.Uuid
+  tokenHash     String           @unique
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime         @default(now())
+
+  @@index([principalType, principalId, kind])
+  @@map("one_time_tokens")
+}
+
+/// Development mailbox: every outgoing email is stored here when MAIL_DRIVER=outbox (no real email is sent).
+model OutboxEmail {
+  id        String   @id @default(uuid()) @db.Uuid
+  toEmail   String
+  subject   String
+  bodyText  String
+  kind      String
+  driver    String
+  createdAt DateTime @default(now())
+
+  @@index([toEmail, createdAt])
+  @@map("outbox_emails")
+}
+
+/// Per-organisation human-readable reference counters (e.g. DSP-MZ-2026-0001). Incremented atomically.
+model ReferenceSequence {
+  id                  String @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String @db.Uuid
+  key                 String
+  value               Int    @default(0)
+
+  @@unique([buyerOrganisationId, key])
+  @@map("reference_sequences")
+}
+
+// ── Documents ─────────────────────────────────────────────────────────────────
+model Document {
+  id                  String       @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String?      @db.Uuid
+  kind                DocumentKind
+  filename            String
+  mimeType            String
+  sizeBytes           Int
+  sha256              String
+  /// Opaque key understood by the DocumentStorage driver (local path or blob URL).
+  storageKey          String
+  createdByType       PrincipalType?
+  createdById         String?      @db.Uuid
+  createdAt           DateTime     @default(now())
+
+  organisation BuyerOrganisation? @relation(fields: [buyerOrganisationId], references: [id])
+
+  @@index([buyerOrganisationId, kind])
+  @@index([sha256])
+  @@map("documents")
+}
+
+// ── Flow Disk import, invoice, purchase ───────────────────────────────────────
+model FlowDiskImport {
+  id                  String               @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String               @db.Uuid
+  reference           String
+  status              FlowDiskImportStatus @default(STAGED)
+  filename            String
+  /// Which registered parser read the file, and whether its format has been verified against a real sample.
+  parserId            String
+  parserVersion       String
+  formatVerified      Boolean              @default(false)
+  fileSha256          String
+  fileDocumentId      String?              @db.Uuid
+  invoiceDocumentId   String?              @db.Uuid
+  /// Header facts read from the file/invoice (floor, buyer, dates, exchange rate …).
+  header              Json
+  /// Parsed rows with any buyer corrections applied (the staged manifest).
+  stagedRows          Json
+  /// Invoice-level draft (from the PDF parser or manual entry): totals, grade summary, charges.
+  invoiceDraft        Json?
+  recordCount         Int                  @default(0)
+  validCount          Int                  @default(0)
+  invalidCount        Int                  @default(0)
+  expectedMassKg      Decimal              @default(0) @db.Decimal(12, 1)
+  expectedUsdValue    Decimal              @default(0) @db.Decimal(14, 2)
+  errorMessage        String?
+  createdById         String               @db.Uuid
+  createdAt           DateTime             @default(now())
+  confirmedById       String?              @db.Uuid
+  confirmedAt         DateTime?
+  invoiceId           String?              @unique @db.Uuid
+  purchaseId          String?              @unique @db.Uuid
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  issues       ImportRowIssue[]
+  invoice      BuyerInvoice?     @relation(fields: [invoiceId], references: [id])
+  purchase     Purchase?         @relation(fields: [purchaseId], references: [id])
+
+  @@unique([buyerOrganisationId, reference])
+  @@index([buyerOrganisationId, status, createdAt])
+  @@index([buyerOrganisationId, fileSha256])
+  @@map("flow_disk_imports")
+}
+
+model ImportRowIssue {
+  id         String              @id @default(uuid()) @db.Uuid
+  importId   String              @db.Uuid
+  rowNumber  Int
+  kind       ImportIssueKind
+  severity   ImportIssueSeverity @default(ERROR)
+  field      String?
+  message    String
+  raw        Json?
+  resolved   Boolean             @default(false)
+
+  import FlowDiskImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId, rowNumber])
+  @@map("import_row_issues")
+}
+
+model BuyerInvoice {
+  id                  String   @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String   @db.Uuid
+  /// Printed invoice number when the document carries one; null otherwise (the sample does not).
+  invoiceNumber       String?
+  /// System reference, always present and unique per buyer (e.g. BINV-MZ-20260522).
+  reference           String
+  company             String?
+  floorName           String
+  buyerNameOnInvoice  String
+  saleDateFrom        DateTime @db.Date
+  saleDateTo          DateTime @db.Date
+  invoiceDate         DateTime @db.Date
+  exchangeRate        Decimal  @db.Decimal(14, 6)
+  preparedBy          String?
+  totalBales          Int
+  totalMassKg         Decimal  @db.Decimal(12, 1)
+  avgUscPerKg         Decimal  @db.Decimal(8, 2)
+  totalUsdValue       Decimal  @db.Decimal(14, 2)
+  totalZigValue       Decimal? @db.Decimal(16, 2)
+  /// USD share of the currency split as printed (e.g. 70.00).
+  splitUsdPercent     Decimal? @db.Decimal(5, 2)
+  payableUsd          Decimal? @db.Decimal(14, 2)
+  payableZig          Decimal? @db.Decimal(16, 2)
+  documentId          String?  @db.Uuid
+  createdAt           DateTime @default(now())
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  charges      InvoiceCharge[]
+  gradeSummary InvoiceGradeSummary[]
+  purchase     Purchase?
+  import       FlowDiskImport?
+
+  @@unique([buyerOrganisationId, reference])
+  @@index([buyerOrganisationId, saleDateFrom])
+  @@map("buyer_invoices")
+}
+
+model InvoiceCharge {
+  id        String  @id @default(uuid()) @db.Uuid
+  invoiceId String  @db.Uuid
+  /// Section letter as printed (A = tobacco value, B = currency split and levies).
+  status    String
+  code      String
+  label     String
+  amountUsd Decimal @db.Decimal(14, 2)
+  amountZig Decimal @db.Decimal(16, 2)
+  sortOrder Int
+
+  invoice BuyerInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, sortOrder])
+  @@map("invoice_charges")
+}
+
+model InvoiceGradeSummary {
+  id        String  @id @default(uuid()) @db.Uuid
+  invoiceId String  @db.Uuid
+  grade     String
+  bales     Int
+  massKg    Decimal @db.Decimal(12, 1)
+  avgUsc    Decimal @db.Decimal(8, 2)
+  usdValue  Decimal @db.Decimal(14, 2)
+
+  invoice BuyerInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_grade_summaries")
+}
+
+model Purchase {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String                  @db.Uuid
+  invoiceId           String                  @unique @db.Uuid
+  reference           String
+  floorName           String
+  saleDate            DateTime                @db.Date
+  totalBales          Int
+  totalMassKg         Decimal                 @db.Decimal(12, 1)
+  totalUsdValue       Decimal                 @db.Decimal(14, 2)
+  receivingStatus     PurchaseReceivingStatus @default(NOT_STARTED)
+  createdAt           DateTime                @default(now())
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  invoice      BuyerInvoice      @relation(fields: [invoiceId], references: [id])
+  import       FlowDiskImport?
+  bales        Bale[]
+  sessions     ReceivingSession[]
+
+  @@unique([buyerOrganisationId, reference])
+  @@index([buyerOrganisationId, saleDate])
+  @@map("purchases")
+}
+
+// ── Bales (individual traceable inventory records) ────────────────────────────
+model Bale {
+  id                  String     @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String     @db.Uuid
+  purchaseId          String     @db.Uuid
+  /// 9 digits + Code 39 mod-43 check character (may be a space). NEVER trim.
+  barcode             String     @db.VarChar(10)
+  /// Season year; barcode is unique within a season.
+  season              Int
+  buyerGrade          String
+  timbGrade           String?
+  growerNo            String
+  lotNo               String
+  massKg              Decimal    @db.Decimal(10, 1)
+  uscPerKg            Decimal    @db.Decimal(8, 2)
+  usdValue            Decimal    @db.Decimal(14, 2)
+  status              BaleStatus @default(EXPECTED)
+  currentWarehouseId  String?    @db.Uuid
+  currentBayId        String?    @db.Uuid
+  currentRowId        String?    @db.Uuid
+  receivedAt          DateTime?
+  /// True for bales created by a processing return that changed the barcode.
+  isProcessed         Boolean    @default(false)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  organisation     BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  purchase         Purchase          @relation(fields: [purchaseId], references: [id])
+  warehouse        Warehouse?        @relation(fields: [currentWarehouseId], references: [id])
+  bay              Bay?              @relation(fields: [currentBayId], references: [id])
+  row              WarehouseRow?     @relation(fields: [currentRowId], references: [id])
+  events           BaleEvent[]
+  movements        BaleMovement[]
+  scans            ReceivingScan[]
+  dispatchBales    DispatchBale[]
+  lineageAsOriginal BaleLineage[]    @relation("OriginalBale")
+  lineageAsNew     BaleLineage[]     @relation("NewBale")
+
+  @@unique([season, barcode])
+  @@index([buyerOrganisationId, status])
+  @@index([buyerOrganisationId, growerNo])
+  @@index([buyerOrganisationId, buyerGrade])
+  @@index([buyerOrganisationId, purchaseId])
+  @@index([currentWarehouseId, currentBayId, currentRowId])
+  @@map("bales")
+}
+
+// ── Receiving ─────────────────────────────────────────────────────────────────
+model ReceivingSession {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String                 @db.Uuid
+  purchaseId          String                 @db.Uuid
+  reference           String
+  status              ReceivingSessionStatus @default(OPEN)
+  startedById         String                 @db.Uuid
+  startedAt           DateTime               @default(now())
+  confirmedById       String?                @db.Uuid
+  confirmedAt         DateTime?
+  /// Default location applied to received bales (the operator can override per scan).
+  defaultWarehouseId  String?                @db.Uuid
+  defaultBayId        String?                @db.Uuid
+  defaultRowId        String?                @db.Uuid
+  notes               String?
+  /// Reconciliation computed when the session is confirmed (counts, mass variance …) — kept as the historical record.
+  reconciliation      Json?
+  reportDocumentId    String?                @db.Uuid
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  purchase     Purchase          @relation(fields: [purchaseId], references: [id])
+  scans        ReceivingScan[]
+  exceptions   ReceivingException[]
+
+  @@unique([buyerOrganisationId, reference])
+  @@index([buyerOrganisationId, purchaseId, status])
+  @@map("receiving_sessions")
+}
+
+model ReceivingScan {
+  id                  String     @id @default(uuid()) @db.Uuid
+  sessionId           String     @db.Uuid
+  buyerOrganisationId String     @db.Uuid
+  /// Exactly what was scanned (kept raw, up to 32 chars, for forensics).
+  barcode             String     @db.VarChar(32)
+  result              ScanResult
+  baleId              String?    @db.Uuid
+  massKg              Decimal?   @db.Decimal(10, 1)
+  warehouseId         String?    @db.Uuid
+  bayId               String?    @db.Uuid
+  rowId               String?    @db.Uuid
+  scannedById         String     @db.Uuid
+  scannedAt           DateTime   @default(now())
+  note                String?
+  /// Set when an authorised correction voids a receipt (so the bale can be received again).
+  voidedAt            DateTime?
+  voidedById          String?    @db.Uuid
+  voidReason          String?
+
+  session ReceivingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  bale    Bale?            @relation(fields: [baleId], references: [id])
+
+  @@index([sessionId, scannedAt])
+  @@index([baleId])
+  @@index([buyerOrganisationId, barcode])
+  @@map("receiving_scans")
+}
+
+model ReceivingException {
+  id                  String          @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String          @db.Uuid
+  sessionId           String?         @db.Uuid
+  scanId              String?         @db.Uuid
+  baleId              String?         @db.Uuid
+  barcode             String          @db.VarChar(32)
+  kind                ScanResult
+  explanation         String
+  status              ExceptionStatus @default(OPEN)
+  raisedById          String          @db.Uuid
+  raisedAt            DateTime        @default(now())
+  resolvedById        String?         @db.Uuid
+  resolvedAt          DateTime?
+  resolution          String?
+
+  session ReceivingSession? @relation(fields: [sessionId], references: [id])
+
+  @@index([buyerOrganisationId, status])
+  @@index([sessionId])
+  @@map("receiving_exceptions")
+}
+
+// ── Warehouses: Buyer → Warehouse → Bay → Row → Bale ──────────────────────────
+model Warehouse {
+  id                  String        @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String        @db.Uuid
+  code                String
+  name                String
+  kind                WarehouseKind @default(STANDARD)
+  address             String?
+  active              Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  bays         Bay[]
+  bales        Bale[]
+
+  @@unique([buyerOrganisationId, code])
+  @@map("warehouses")
+}
+
+model Bay {
+  id                  String  @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String  @db.Uuid
+  warehouseId         String  @db.Uuid
+  code                String
+  name                String?
+  active              Boolean @default(true)
+
+  warehouse Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  rows      WarehouseRow[]
+  bales     Bale[]
+
+  @@unique([warehouseId, code])
+  @@index([buyerOrganisationId])
+  @@map("bays")
+}
+
+model WarehouseRow {
+  id                  String  @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String  @db.Uuid
+  bayId               String  @db.Uuid
+  code                String
+  /// Optional capacity in bales (for the occupancy view).
+  capacityBales       Int?
+  active              Boolean @default(true)
+
+  bay   Bay    @relation(fields: [bayId], references: [id], onDelete: Cascade)
+  bales Bale[]
+
+  @@unique([bayId, code])
+  @@index([buyerOrganisationId])
+  @@map("warehouse_rows")
+}
+
+/// IMMUTABLE movement ledger. Inventory positions are derived from these rows; UPDATE/DELETE are rejected by a trigger.
+model BaleMovement {
+  id                  String          @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String          @db.Uuid
+  baleId              String          @db.Uuid
+  type                MovementType
+  fromWarehouseId     String?         @db.Uuid
+  fromBayId           String?         @db.Uuid
+  fromRowId           String?         @db.Uuid
+  toWarehouseId       String?         @db.Uuid
+  toBayId             String?         @db.Uuid
+  toRowId             String?         @db.Uuid
+  reason              String
+  performedById       String          @db.Uuid
+  performedAt         DateTime        @default(now())
+  refType             MovementRefType @default(MANUAL)
+  refId               String?         @db.Uuid
+  note                String?
+
+  bale Bale @relation(fields: [baleId], references: [id])
+
+  @@index([baleId, performedAt])
+  @@index([buyerOrganisationId, performedAt])
+  @@map("bale_movements")
+}
+
+/// IMMUTABLE traceability timeline (brief §10). UPDATE/DELETE rejected by a trigger.
+model BaleEvent {
+  id                  String        @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String        @db.Uuid
+  baleId              String        @db.Uuid
+  type                BaleEventType
+  occurredAt          DateTime      @default(now())
+  performedById       String?       @db.Uuid
+  /// Name captured at the time (so history survives user renames).
+  performedByName     String?
+  fromLabel           String?
+  toLabel             String?
+  refType             String?
+  refId               String?       @db.Uuid
+  refLabel            String?
+  notes               String?
+  payload             Json?
+
+  bale Bale @relation(fields: [baleId], references: [id])
+
+  @@index([baleId, occurredAt])
+  @@index([buyerOrganisationId, occurredAt])
+  @@map("bale_events")
+}
+
+// ── Processing ────────────────────────────────────────────────────────────────
+model ProcessingCompany {
+  id                  String   @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String   @db.Uuid
+  name                String
+  registrationNo      String?
+  address             String?
+  contactPerson       String?
+  phone               String?
+  email               String?
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  dispatches   Dispatch[]
+
+  @@unique([buyerOrganisationId, name])
+  @@map("processing_companies")
+}
+
+model Dispatch {
+  id                  String         @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String         @db.Uuid
+  reference           String
+  processingCompanyId String         @db.Uuid
+  dispatchDate        DateTime       @db.Date
+  reason              String
+  notes               String?
+  status              DispatchStatus @default(DISPATCHED)
+  totalBales          Int
+  totalMassKg         Decimal        @db.Decimal(12, 1)
+  createdById         String         @db.Uuid
+  createdAt           DateTime       @default(now())
+  documentId          String?        @db.Uuid
+  closedAt            DateTime?
+  closedById          String?        @db.Uuid
+  closeExplanation    String?
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  company      ProcessingCompany @relation(fields: [processingCompanyId], references: [id])
+  bales        DispatchBale[]
+  returns      ProcessingReturn[]
+
+  @@unique([buyerOrganisationId, reference])
+  @@index([buyerOrganisationId, status])
+  @@map("dispatches")
+}
+
+model DispatchBale {
+  id                  String             @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String             @db.Uuid
+  dispatchId          String             @db.Uuid
+  baleId              String             @db.Uuid
+  /// Exactly where the bale was dispatched from.
+  sourceWarehouseId   String?            @db.Uuid
+  sourceBayId         String?            @db.Uuid
+  sourceRowId         String?            @db.Uuid
+  massKgAtDispatch    Decimal            @db.Decimal(10, 1)
+  status              DispatchBaleStatus @default(OUTSTANDING)
+
+  dispatch Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  bale     Bale     @relation(fields: [baleId], references: [id])
+
+  @@unique([dispatchId, baleId])
+  @@index([buyerOrganisationId, status])
+  @@index([baleId])
+  @@map("dispatch_bales")
+}
+
+model ProcessingReturn {
+  id                  String       @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String       @db.Uuid
+  dispatchId          String       @db.Uuid
+  reference           String
+  status              ReturnStatus @default(OPEN)
+  startedById         String       @db.Uuid
+  startedAt           DateTime     @default(now())
+  confirmedById       String?      @db.Uuid
+  confirmedAt         DateTime?
+  notes               String?
+  reconciliation      Json?
+  reportDocumentId    String?      @db.Uuid
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  dispatch     Dispatch          @relation(fields: [dispatchId], references: [id])
+  bales        ReturnBale[]
+
+  @@unique([buyerOrganisationId, reference])
+  @@index([buyerOrganisationId, dispatchId])
+  @@map("processing_returns")
+}
+
+model ReturnBale {
+  id                  String        @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String        @db.Uuid
+  returnId            String        @db.Uuid
+  dispatchBaleId      String?       @db.Uuid
+  originalBaleId      String?       @db.Uuid
+  /// Raw barcode scanned on return (may differ from the original when the bale was re-identified).
+  scannedBarcode      String        @db.VarChar(32)
+  newBaleId           String?       @db.Uuid
+  outcome             ReturnOutcome
+  returnedMassKg      Decimal?      @db.Decimal(10, 1)
+  newBuyerGrade       String?
+  newTimbGrade        String?
+  condition           String?
+  /// Required whenever the outcome is anything other than a clean RETURNED with the same mass.
+  explanation         String?
+  warehouseId         String?       @db.Uuid
+  bayId               String?       @db.Uuid
+  rowId               String?       @db.Uuid
+  scannedById         String        @db.Uuid
+  scannedAt           DateTime      @default(now())
+
+  return ProcessingReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  @@index([returnId])
+  @@index([buyerOrganisationId, originalBaleId])
+  @@map("return_bales")
+}
+
+/// Links an original bale to the bale record that replaced it when processing changed its identity.
+model BaleLineage {
+  id                  String   @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String   @db.Uuid
+  originalBaleId      String   @db.Uuid
+  newBaleId           String   @db.Uuid
+  originalBarcode     String   @db.VarChar(10)
+  newBarcode          String   @db.VarChar(10)
+  reason              String
+  returnId            String?  @db.Uuid
+  createdById         String   @db.Uuid
+  createdAt           DateTime @default(now())
+
+  original Bale @relation("OriginalBale", fields: [originalBaleId], references: [id])
+  newBale  Bale @relation("NewBale", fields: [newBaleId], references: [id])
+
+  @@unique([originalBaleId, newBaleId])
+  @@index([buyerOrganisationId])
+  @@map("bale_lineage")
+}
+
+// ── Audit ─────────────────────────────────────────────────────────────────────
+model AuditLog {
+  id                  String         @id @default(uuid()) @db.Uuid
+  occurredAt          DateTime       @default(now())
+  principalType       PrincipalType?
+  principalId         String?        @db.Uuid
+  principalName       String?
+  buyerOrganisationId String?        @db.Uuid
+  action              String
+  entityType          String
+  entityId            String?
+  entityRef           String?
+  previous            Json?
+  next                Json?
+  reason              String?
+  ip                  String?
+  requestId           String?
+
+  @@index([buyerOrganisationId, occurredAt])
+  @@index([entityType, entityId])
+  @@index([principalType, principalId])
+  @@map("audit_logs")
+}

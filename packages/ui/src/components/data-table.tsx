@@ -18,6 +18,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Columns3, M
 import { cn } from "../lib/cn";
 import { Button } from "./button";
 import { Checkbox, Input } from "./form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 import { EmptyState, Skeleton } from "./feedback";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table";
 import {
@@ -340,18 +341,10 @@ export function DataTable<T>({
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2">
               Rows
-              <select
-                aria-label="Rows per page"
-                value={pagination.pageSize}
-                onChange={(e) => table.setPageSize(Number(e.target.value))}
-                className="h-8 rounded-lg border border-border-strong bg-surface px-2 text-xs text-foreground"
-              >
-                {pageSizeOptions.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
+              <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
+                <SelectTrigger size="sm" aria-label="Rows per page" className="w-20"><SelectValue /></SelectTrigger>
+                <SelectContent>{pageSizeOptions.map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+              </Select>
             </label>
             <div className="flex items-center gap-1">
               <Button

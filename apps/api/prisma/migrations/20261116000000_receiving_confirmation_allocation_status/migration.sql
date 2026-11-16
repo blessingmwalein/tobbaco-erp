@@ -1,0 +1,1 @@
+ALTER TYPE "ReceivingSessionStatus" ADD VALUE IF NOT EXISTS 'ALLOCATED';
