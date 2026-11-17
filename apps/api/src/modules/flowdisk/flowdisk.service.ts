@@ -141,6 +141,8 @@ export class FlowdiskService {
         gradeSummary: invoiceDraft?.gradeSummary?.length ? { create: invoiceDraft.gradeSummary.map((summary) => ({ grade: summary.grade, bales: summary.bales, massKg: summary.massKg, avgUsc: summary.avgUsc, usdValue: summary.usdValue })) } : undefined,
       }});
       const purchase = await tx.purchase.create({ data: { buyerOrganisationId: buyer.organisationId, invoiceId: invoice.id, reference: purchaseRef, floorName: header.floorName, saleDate: new Date(`${header.saleDateTo}T00:00:00Z`), totalBales: rows.length, totalMassKg: totalMass, totalUsdValue: totalValue } });
+      // One purchase → one purchase-level reconciliation, open from the moment the purchase exists (brief §6).
+      await tx.purchaseReconciliation.create({ data: { buyerOrganisationId: buyer.organisationId, purchaseId: purchase.id, status: "AWAITING_SHIPMENTS" } });
       for (const row of rows) {
         const bale = await tx.bale.create({ data: { buyerOrganisationId: buyer.organisationId, purchaseId: purchase.id, barcode: row.barcode, season: year, buyerGrade: row.buyerGrade, timbGrade: row.timbGrade, growerNo: row.growerNo, lotNo: row.lotNo, massKg: row.massKg, uscPerKg: row.uscPerKg, usdValue: row.usdValue } });
         await tx.baleEvent.create({ data: { buyerOrganisationId: buyer.organisationId, baleId: bale.id, type: "IMPORTED", performedById: buyer.id, performedByName: buyer.name, refType: "FlowDiskImport", refId: imp.id, refLabel: imp.reference } });

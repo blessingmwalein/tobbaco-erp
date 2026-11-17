@@ -1,0 +1,27 @@
+{
+  "format": "leaflogix-shipment",
+  "version": 1,
+  "source_shipment_id": 45,
+  "shipment": {
+    "destination": "ILT GlenEagles",
+    "carrier": "Strauss Logistics",
+    "vehicle": "ADG 7882",
+    "driver": "Drez Den",
+    "departure_date": "2026-09-28",
+    "arrival_date": null,
+    "status": "In Transit",
+    "bale_count": 1,
+    "mass": "122.00"
+  },
+  "bales": [
+    {
+      "barcode": "760657431$",
+      "grower": "V100008",
+      "mass": "122.00",
+      "grade": "L3OK",
+      "buyer_grade": "",
+      "lot": 4,
+      "status": "Loaded"
+    }
+  ]
+}

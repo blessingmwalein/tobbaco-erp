@@ -12,6 +12,7 @@ const labels: Record<ReportType, string> = {
   receiving: "Receiving reports",
   inventory: "Inventory reports",
   dispatches: "Processing reports",
+  reconciliation: "Reconciliation reports",
 };
 
 const columns: Record<ReportType, string[]> = {
@@ -19,6 +20,7 @@ const columns: Record<ReportType, string[]> = {
   receiving: ["reference", "status", "startedAt", "confirmedAt", "reconciliation"],
   inventory: ["barcode", "season", "buyerGrade", "massKg", "usdValue", "status"],
   dispatches: ["reference", "dispatchDate", "status", "totalBales", "totalMassKg", "reason"],
+  reconciliation: ["reference", "status", "startedAt", "confirmedAt", "reconciliation"],
 };
 
 export function BuyerReportPage({ type }: { type: ReportType }) {
@@ -35,7 +37,7 @@ export function BuyerReportPage({ type }: { type: ReportType }) {
     },
   })), [fields]);
 
-  async function exportReport(format: "pdf" | "xlsx") {
+  async function exportReport(format: "pdf" | "xlsx" | "csv") {
     const params = new URLSearchParams({ type, format, page: "1", pageSize: "100" });
     if (from) params.set("from", from);
     if (to) params.set("to", to);
@@ -53,6 +55,7 @@ export function BuyerReportPage({ type }: { type: ReportType }) {
             <label className="text-sm"><span className="mb-1 block font-medium">To</span><input className="h-9 rounded-lg border border-border bg-background px-3" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
             <Button type="submit" variant="secondary">Apply filters</Button>
             <Button type="button" variant="ghost" onClick={() => void exportReport("xlsx")} disabled={query.isPending}><Download aria-hidden /> Excel</Button>
+            <Button type="button" variant="ghost" onClick={() => void exportReport("csv")} disabled={query.isPending}><Download aria-hidden /> CSV</Button>
             <Button type="button" variant="ghost" onClick={() => void exportReport("pdf")} disabled={query.isPending}><Download aria-hidden /> PDF</Button>
           </form>
           {query.isLoading ? <Skeleton className="h-72" /> : query.isError ? <ErrorState title="Could not load report" description={describeError(query.error)} action={<Button variant="secondary" onClick={() => void query.refetch()}>Try again</Button>} /> : !query.data?.items.length ? <EmptyState icon={FileBarChart} title="No records found" description="Try a different date range." /> : (

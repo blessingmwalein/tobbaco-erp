@@ -98,6 +98,12 @@ enum PurchaseReceivingStatus {
   COMPLETE
 }
 
+enum PurchaseReconciliationStatus {
+  AWAITING_SHIPMENTS
+  IN_PROGRESS
+  CLOSED
+}
+
 enum ReceivingSessionStatus {
   OPEN
   CONFIRMED
@@ -251,6 +257,7 @@ model BuyerOrganisation {
   returns            ProcessingReturn[]
   shipments          BuyerShipment[]
   shipmentImports    BuyerShipmentImport[]
+  reconciliations    PurchaseReconciliation[]
 
   @@map("buyer_organisations")
 }
@@ -501,14 +508,33 @@ model Purchase {
 
   organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
   invoice      BuyerInvoice      @relation(fields: [invoiceId], references: [id])
-  import       FlowDiskImport?
-  bales        Bale[]
-  sessions     ReceivingSession[]
-  shipments    BuyerShipment[]
+  import         FlowDiskImport?
+  bales          Bale[]
+  sessions       ReceivingSession[]
+  shipments      BuyerShipment[]
+  reconciliation PurchaseReconciliation?
 
   @@unique([buyerOrganisationId, reference])
   @@index([buyerOrganisationId, saleDate])
   @@map("purchases")
+}
+
+model PurchaseReconciliation {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  buyerOrganisationId String                      @db.Uuid
+  purchaseId          String                      @unique @db.Uuid
+  status              PurchaseReconciliationStatus @default(AWAITING_SHIPMENTS)
+  snapshot            Json?
+  closedById          String?                     @db.Uuid
+  closedAt            DateTime?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+
+  organisation BuyerOrganisation @relation(fields: [buyerOrganisationId], references: [id])
+  purchase     Purchase          @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+
+  @@index([buyerOrganisationId, status])
+  @@map("purchase_reconciliations")
 }
 
 // ── Bales (individual traceable inventory records) ────────────────────────────

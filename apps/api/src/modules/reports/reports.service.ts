@@ -31,6 +31,10 @@ export class ReportsService {
       const where = { ...(date ? { startedAt: date } : {}) };
       const [rows, count] = await Promise.all([db.receivingSession.findMany({ where, orderBy: { startedAt: "desc" }, ...pageArgs(q), select: { id: true, reference: true, status: true, startedAt: true, confirmedAt: true, reconciliation: true } }), db.receivingSession.count({ where })]);
       items = rows as unknown as Row[]; total = count;
+    } else if (q.type === "reconciliation") {
+      const where = { ...(date ? { updatedAt: date } : {}) };
+      const [rows, count] = await Promise.all([db.purchaseReconciliation.findMany({ where, orderBy: { updatedAt: "desc" }, ...pageArgs(q), select: { id: true, status: true, closedAt: true, updatedAt: true, purchase: { select: { reference: true, saleDate: true, totalBales: true, floorName: true } } } }), db.purchaseReconciliation.count({ where })]);
+      items = rows as unknown as Row[]; total = count;
     } else {
       const where = { ...(date ? { dispatchDate: date } : {}) };
       const [rows, count] = await Promise.all([db.dispatch.findMany({ where, orderBy: { dispatchDate: "desc" }, ...pageArgs(q), select: { id: true, reference: true, dispatchDate: true, status: true, totalBales: true, totalMassKg: true, reason: true } }), db.dispatch.count({ where })]);
@@ -41,6 +45,13 @@ export class ReportsService {
 
   async export(organisationId: string, q: ReportQuery, format: Exclude<ReportFormat, "json">): Promise<{ data: Buffer; filename: string; mimeType: string }> {
     const report = await this.list(organisationId, q);
+    if (format === "csv") {
+      const keys = report.items.length ? Object.keys(report.items[0]) : ["message"];
+      const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+      const lines = [keys.join(",")];
+      for (const row of report.items) lines.push(keys.map((k) => esc(row[k])).join(","));
+      return { data: Buffer.from(lines.join("\n"), "utf8"), filename: `${report.type}.csv`, mimeType: "text/csv" };
+    }
     if (format === "xlsx") {
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet(report.type);

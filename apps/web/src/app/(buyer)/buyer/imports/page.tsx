@@ -52,7 +52,7 @@ export default function ImportsPage() {
     }
   }
 
-  return <RequireBuyerPermission permission="buyer.flowdisk.import"><PageIntro title="Flow Disk imports" description="Upload, validate and preview every invoice fact before creating purchases and bales." actions={<Button disabled={!canImport || stage.isPending} disabledReason="Your role cannot import Flow Disk files" onClick={() => inputRef.current?.click()}><Upload /> Upload Flow Disk</Button>} />
+  return <RequireBuyerPermission permission="buyer.flowdisk.import"><PageIntro title="Invoices import" description="Upload, validate and preview every Flow Disk invoice fact before creating purchases and bales." actions={<Button disabled={!canImport || stage.isPending} disabledReason="Your role cannot import Flow Disk files" onClick={() => inputRef.current?.click()}><Upload /> Upload Flow Disk</Button>} />
     <input ref={inputRef} className="sr-only" type="file" accept=".txt,.csv,text/plain,text/csv" onChange={(e) => void upload(e.target.files?.[0])} aria-label="Upload Flow Disk file" />
     {uploading || stage.isPending ? <Card className="mb-6" role="status" aria-live="polite"><CardContent className="flex items-center gap-3 py-4 text-sm"><LoaderCircle className="size-5 animate-spin text-primary" /><span>Uploading and validating <strong>{uploadName}</strong>...</span></CardContent></Card> : null}
     {error ? <Callout tone="danger" title="Import failed" className="mb-4">{error}</Callout> : null}

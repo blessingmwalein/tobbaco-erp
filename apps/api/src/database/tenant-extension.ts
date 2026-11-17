@@ -33,6 +33,10 @@ export const TENANT_MODELS = [
   "ReturnBale",
   "BaleLineage",
   "ReferenceSequence",
+  "BuyerShipment",
+  "BuyerShipmentImport",
+  "BuyerShipmentBale",
+  "PurchaseReconciliation",
 ] as const;
 
 const TENANT_SET = new Set<string>(TENANT_MODELS);

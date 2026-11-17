@@ -155,13 +155,14 @@ export class LedgerService {
 
   // ── state changes ──────────────────────────────────────────────────────────
   /**
-   * EXPECTED → IN_STOCK (physically received). Optionally stores the bale in a location in the same step.
-   * Conditional on status EXPECTED: a bale cannot be received twice.
+   * EXPECTED | DISPATCHED → IN_STOCK (physically received). Optionally stores the bale in a location in the same step.
+   * Accepts DISPATCHED because confirming a shipment import flips bales from EXPECTED → DISPATCHED before they arrive.
+   * Conditional update: a bale that is already IN_STOCK (or any other terminal status) cannot be received twice.
    */
   async receive(ctx: LedgerCtx, bale: Pick<Bale, "id" | "barcode">, input: { session: RefInput; location?: ResolvedLocation | null; massKg?: Prisma.Decimal | string | null }): Promise<void> {
     if (input.location && input.location.kind !== "STANDARD") throw AppError.unprocessable("WRONG_WAREHOUSE_KIND", "Purchased bales are received into a standard buyer warehouse");
     const updated = await ctx.tx.bale.updateMany({
-      where: { id: bale.id, status: "EXPECTED" },
+      where: { id: bale.id, status: { in: ["EXPECTED", "DISPATCHED"] } },
       data: {
         status: "IN_STOCK",
         receivedAt: ctx.now(),

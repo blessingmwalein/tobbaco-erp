@@ -25,11 +25,26 @@ export const invoiceQuerySchema = pageQuerySchema.extend({
 });
 export type InvoiceQuery = z.infer<typeof invoiceQuerySchema>;
 
+export const purchaseReceivingStatusSchema = z.enum([
+  "NOT_STARTED",
+  "PARTIALLY_DISPATCHED",
+  "IN_PROGRESS",
+  "PARTIALLY_RECEIVED",
+  "PARTIAL",
+  "COMPLETE",
+]);
+
 export const purchaseQuerySchema = pageQuerySchema.extend({
   from: isoDateSchema.optional(),
   to: isoDateSchema.optional(),
   floor: z.string().trim().max(120).optional(),
-  status: z.enum(["NOT_STARTED", "IN_PROGRESS", "PARTIAL", "COMPLETE"]).optional(),
+  /** Filter by the buyer name printed on the source invoice. */
+  buyer: z.string().trim().max(160).optional(),
+  /** Filter by the source invoice number/reference. */
+  invoiceNumber: z.string().trim().max(120).optional(),
+  status: purchaseReceivingStatusSchema.optional(),
+  /** Filter by the purchase-level reconciliation status. */
+  reconciliationStatus: z.enum(["AWAITING_SHIPMENTS", "IN_PROGRESS", "CLOSED"]).optional(),
 });
 export type PurchaseQuery = z.infer<typeof purchaseQuerySchema>;
 

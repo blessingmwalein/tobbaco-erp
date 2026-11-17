@@ -23,7 +23,7 @@ export class ReportsController {
   @Get("export")
   @RequireBuyerPermission("buyer.reports.export")
   async export(@CurrentBuyer() buyer: BuyerPrincipal, @Query(new ZodValidationPipe(reportQuerySchema)) q: ReportQuery, @Res() response: Response) {
-    const format = q.format === "xlsx" ? "xlsx" : "pdf";
+    const format = q.format === "xlsx" ? "xlsx" : q.format === "csv" ? "csv" : "pdf";
     const file = await this.service.export(buyer.organisationId, q, format);
     response.set({ "Content-Type": file.mimeType, "Content-Disposition": `attachment; filename="${file.filename}"`, "Content-Length": String(file.data.length) });
     response.send(file.data);

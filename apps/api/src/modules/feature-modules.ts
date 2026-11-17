@@ -8,6 +8,7 @@ import { MovementsModule } from "./movements/movements.module";
 import { ProcessingModule } from "./processing/processing.module";
 import { PurchasesModule } from "./purchases/purchases.module";
 import { ReceivingModule } from "./receiving/receiving.module";
+import { ReconciliationModule } from "./reconciliation/reconciliation.module";
 import { ReportsModule } from "./reports/reports.module";
 import { ReturnsModule } from "./returns/returns.module";
 import { StaffModule } from "./staff/staff.module";
@@ -27,6 +28,7 @@ export const FEATURE_MODULES: Type<unknown>[] = [
   FlowdiskModule, // Stage 2: Flow Disk + invoice import
   PurchasesModule, // Stage 2: invoices, purchases, bale manifests
   ReceivingModule, // Stage 3: receiving sessions, scans, reconciliation
+  ReconciliationModule, // Purchase-level reconciliation, close, report, final allocation
   WarehousesModule, // Stage 4: warehouses / bays / rows / inventory
   ShipmentsModule, // Buyer dispatch manifests, arrivals, and incoming shipments
   MovementsModule, // Stage 4: movements ledger + transfers

@@ -5,20 +5,14 @@ import {
   ClipboardCheck,
   ClipboardList,
   FileDown,
-  FileSpreadsheet,
-  Factory,
-  Grid3x3,
   History,
   LayoutDashboard,
-  PackageCheck,
   PackageSearch,
   Receipt,
   ScanBarcode,
   Settings,
   Truck,
-  Undo2,
   UserCog,
-  Warehouse,
   ArrowLeftRight,
   type LucideIcon,
 } from "lucide-react";
@@ -38,7 +32,9 @@ export interface BuyerNavGroup {
   items: BuyerNavItem[];
 }
 
-/** Buyer Portal navigation — the structure in the feature brief (§12). */
+/** Buyer Portal navigation — restructured to mirror the business workflow:
+ * Flow Disk import → invoice → purchase register → shipment import → in-transit → arrival → bale receiving →
+ * purchase-level reconciliation → reconciliation report → warehouse allocation → inventory & traceability. */
 export const BUYER_NAV_GROUPS: BuyerNavGroup[] = [
   {
     label: "Overview",
@@ -47,37 +43,24 @@ export const BUYER_NAV_GROUPS: BuyerNavGroup[] = [
   {
     label: "Purchases",
     items: [
-      { label: "Buyer Invoices", href: "/buyer/invoices", icon: Receipt, permission: "buyer.invoices.view", keywords: "invoice financial charges" },
-      { label: "Flow Disk Imports", href: "/buyer/imports", icon: FileDown, permission: "buyer.purchases.view", keywords: "flow disk import upload" },
+      { label: "Invoices Import", href: "/buyer/imports", icon: FileDown, permission: "buyer.flowdisk.import", keywords: "flow disk invoice upload" },
+      { label: "Invoices", href: "/buyer/invoices", icon: Receipt, permission: "buyer.invoices.view", keywords: "invoice financial charges" },
       { label: "Purchase Register", href: "/buyer/purchases", icon: ClipboardList, permission: "buyer.purchases.view" },
-      { label: "Bale Manifests", href: "/buyer/manifests", icon: FileSpreadsheet, permission: "buyer.purchases.view", keywords: "expected bales" },
     ],
   },
   {
     label: "Operations",
     items: [
-      { label: "Bale Receiving", href: "/buyer/receiving", icon: ScanBarcode, permission: "buyer.receiving.view", keywords: "scan receive" },
-      { label: "Incoming Shipments", href: "/buyer/shipments", icon: Truck, permission: "buyer.receiving.view", keywords: "dispatch manifest truck arrival" },
-      { label: "Receiving Reconciliation", href: "/buyer/receiving/reconciliation", icon: ClipboardCheck, permission: "buyer.receiving.view" },
-      { label: "Warehouse Inventory", href: "/buyer/inventory", icon: Boxes, permission: "buyer.warehouse.view", keywords: "stock bales" },
-      { label: "Warehouse Movements", href: "/buyer/movements", icon: ArrowLeftRight, permission: "buyer.warehouse.view", keywords: "transfer move ledger" },
-    ],
-  },
-  {
-    label: "Processing",
-    items: [
-      { label: "Processing Companies", href: "/buyer/processing/companies", icon: Factory, permission: "buyer.processing.view" },
-      { label: "Dispatches", href: "/buyer/processing/dispatches", icon: Truck, permission: "buyer.processing.view", keywords: "dispatch to processor" },
-      { label: "Processing Returns", href: "/buyer/processing/returns", icon: Undo2, permission: "buyer.processing.view", keywords: "processed tobacco back" },
-      { label: "Processing Reconciliation", href: "/buyer/processing/reconciliation", icon: PackageCheck, permission: "buyer.processing.view" },
+      { label: "Invoice Shipments", href: "/buyer/shipments", icon: Truck, permission: "buyer.receiving.view", keywords: "shipment json dispatch truck arrival" },
+      { label: "Bales Receiving", href: "/buyer/receiving", icon: ScanBarcode, permission: "buyer.receiving.view", keywords: "scan receive" },
+      { label: "Receiving Reconciliation", href: "/buyer/reconciliation", icon: ClipboardCheck, permission: "buyer.receiving.view", keywords: "purchase reconcile close report" },
     ],
   },
   {
     label: "Inventory",
     items: [
-      { label: "Buyer Warehouses", href: "/buyer/warehouses", icon: Warehouse, permission: "buyer.warehouse.view" },
-      { label: "Warehouse Bays & Rows", href: "/buyer/warehouses/locations", icon: Grid3x3, permission: "buyer.warehouse.view", keywords: "bay row location" },
-      { label: "Processing Warehouses", href: "/buyer/processing/warehouses", icon: Building2, permission: "buyer.warehouse.view" },
+      { label: "Warehouse Inventory", href: "/buyer/inventory", icon: Boxes, permission: "buyer.warehouse.view", keywords: "stock bales" },
+      { label: "Warehouse Movements", href: "/buyer/movements", icon: ArrowLeftRight, permission: "buyer.warehouse.view", keywords: "transfer move ledger" },
       { label: "Bale Traceability", href: "/buyer/traceability", icon: PackageSearch, permission: "buyer.traceability.view", keywords: "timeline history barcode" },
     ],
   },
@@ -87,7 +70,6 @@ export const BUYER_NAV_GROUPS: BuyerNavGroup[] = [
       { label: "Purchase Reports", href: "/buyer/reports/purchases", icon: BarChart3, permission: "buyer.reports.view" },
       { label: "Receiving Reports", href: "/buyer/reports/receiving", icon: BarChart3, permission: "buyer.reports.view" },
       { label: "Inventory Reports", href: "/buyer/reports/inventory", icon: BarChart3, permission: "buyer.reports.view" },
-      { label: "Processing Reports", href: "/buyer/reports/processing", icon: BarChart3, permission: "buyer.reports.view" },
     ],
   },
   {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const reportTypeSchema = z.enum(["inventory", "purchases", "receiving", "dispatches"]);
-export const reportFormatSchema = z.enum(["json", "pdf", "xlsx"]);
+export const reportTypeSchema = z.enum(["inventory", "purchases", "receiving", "dispatches", "reconciliation"]);
+export const reportFormatSchema = z.enum(["json", "pdf", "xlsx", "csv"]);
 export const reportQuerySchema = z.object({
   type: reportTypeSchema.default("inventory"),
   format: reportFormatSchema.default("json"),

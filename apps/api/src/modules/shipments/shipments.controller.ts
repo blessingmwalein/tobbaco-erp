@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
 import { buyerShipmentArrivalSchema, buyerShipmentImportSchema } from "@tobacco/validation";
 import { BuyerOnly, CurrentBuyer, RequireBuyerPermission, ReqMeta, type RequestMeta } from "../../common/decorators";
 import type { BuyerPrincipal } from "../../common/principal";
@@ -12,7 +12,11 @@ export class ShipmentsController {
 
   @Get()
   @RequireBuyerPermission("buyer.receiving.view")
-  list(@CurrentBuyer() actor: BuyerPrincipal, @Query() query: { status?: string; search?: string }) { return this.service.list(actor, query); }
+  list(@CurrentBuyer() actor: BuyerPrincipal, @Query() query: { status?: string; search?: string; purchaseId?: string }) { return this.service.list(actor, query); }
+
+  @Get("imports/:id")
+  @RequireBuyerPermission("buyer.receiving.view")
+  preview(@CurrentBuyer() actor: BuyerPrincipal, @Param("id") id: string) { return this.service.preview(actor, id); }
 
   @Get(":id")
   @RequireBuyerPermission("buyer.receiving.view")
