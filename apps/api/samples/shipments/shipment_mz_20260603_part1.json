@@ -1,0 +1,25 @@
+{
+  "format": "leaflogix-shipment",
+  "version": 1,
+  "source_shipment_id": 202,
+  "shipment": {
+    "destination": "Buyer Warehouse A",
+    "carrier": "National Transport",
+    "vehicle": "ABC 7701",
+    "driver": "Samuel Mutare",
+    "departure_date": "2026-06-04",
+    "arrival_date": null,
+    "status": "In Transit",
+    "bale_count": 7,
+    "mass": "645.0"
+  },
+  "bales": [
+    { "barcode": "999300001V", "grower": "349376", "mass": "105.0", "grade": "L4OKA", "buyer_grade": "L4OMA", "lot": "0071", "status": "Loaded" },
+    { "barcode": "999300002W", "grower": "349376", "mass": "98.0",  "grade": "L4OK",  "buyer_grade": "L4OMA", "lot": "0072", "status": "Loaded" },
+    { "barcode": "999300003X", "grower": "408070", "mass": "88.0",  "grade": "L3OKA", "buyer_grade": "L4OMA", "lot": "0041", "status": "Loaded" },
+    { "barcode": "999300004Y", "grower": "408070", "mass": "92.0",  "grade": "L4OA",  "buyer_grade": "L4OMA", "lot": "0042", "status": "Loaded" },
+    { "barcode": "999300005Z", "grower": "302209", "mass": "70.0",  "grade": "L3OK",  "buyer_grade": "L3OMA", "lot": "0019", "status": "Loaded" },
+    { "barcode": "999300006-", "grower": "302209", "mass": "68.0",  "grade": "L3OKA", "buyer_grade": "L3OMA", "lot": "0020", "status": "Loaded" },
+    { "barcode": "999300007.", "grower": "395144", "mass": "115.0", "grade": "L4OKA", "buyer_grade": "L4OMA", "lot": "0081", "status": "Loaded" }
+  ]
+}

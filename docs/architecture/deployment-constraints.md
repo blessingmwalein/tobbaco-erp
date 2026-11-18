@@ -18,6 +18,7 @@ Documented before backend work, per the brief. Nothing here is built in Phase 1 
 | Connection limits (many short-lived functions) | Prisma connection exhaustion on Postgres | Use Neon **pooled** connection string for runtime; direct (unpooled) URL for migrations only; keep Prisma client singleton; tune pool size; consider Prisma Accelerate/driver adapters if needed |
 | Neon autosuspend/cold DB | First query latency | Acceptable for office hours; warm-up cron optional; retry with backoff on first connect |
 | Ephemeral filesystem | Uploaded files, generated CSV/PDF vanish | Persist to object storage; store metadata (name, checksum, size) in DB |
+| Read-only filesystem (writing `.storage` fails with ENOENT → HTTP 500 on Flow Disk import) | Local-disk document storage cannot work on Vercel | Buyer Portal: `STORAGE_DRIVER=database` keeps file bytes in PostgreSQL (`document_blobs`); it is chosen automatically when `VERCEL=1`. Local disk is for development only. Object storage remains the answer if documents ever get large. The JSON body limit is 4 MB (Vercel caps requests at 4.5 MB). |
 | No sticky sessions | Auth must be stateless | JWT (short-lived access + refresh strategy), revocation list in DB if needed |
 | Idempotency on retries | Serverless platforms retry/timeout | Idempotency keys on imports, schedules, processing runs, scans; unique constraints as the final guard |
 | Secrets | Keys must not be in source | Vercel environment variables per environment; separate dev/preview/prod; TIMB keys and payment credentials in a secret store |

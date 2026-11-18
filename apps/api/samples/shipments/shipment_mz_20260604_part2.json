@@ -1,0 +1,25 @@
+{
+  "format": "leaflogix-shipment",
+  "version": 1,
+  "source_shipment_id": 205,
+  "shipment": {
+    "destination": "Buyer Warehouse A",
+    "carrier": "Strauss Logistics",
+    "vehicle": "TRK 9921",
+    "driver": "Anna Sibanda",
+    "departure_date": "2026-06-06",
+    "arrival_date": null,
+    "status": "In Transit",
+    "bale_count": 7,
+    "mass": "651.0"
+  },
+  "bales": [
+    { "barcode": "999400009/", "grower": "109347", "mass": "95.0",  "grade": "L3OKA", "buyer_grade": "L4OMA", "lot": "0111", "status": "Loaded" },
+    { "barcode": "999400010W", "grower": "109347", "mass": "88.0",  "grade": "L4OKA", "buyer_grade": "L4OMA", "lot": "0112", "status": "Loaded" },
+    { "barcode": "999400011X", "grower": "303873", "mass": "116.0", "grade": "L4OKA", "buyer_grade": "L4OMA", "lot": "0014", "status": "Loaded" },
+    { "barcode": "999400012Y", "grower": "303873", "mass": "108.0", "grade": "L4OK",  "buyer_grade": "L4OMA", "lot": "0015", "status": "Loaded" },
+    { "barcode": "999400013Z", "grower": "276607", "mass": "62.0",  "grade": "L2RK",  "buyer_grade": "L2OMA", "lot": "0009", "status": "Loaded" },
+    { "barcode": "999400014-", "grower": "405079", "mass": "98.0",  "grade": "L4OFA", "buyer_grade": "L4OMA", "lot": "0041", "status": "Loaded" },
+    { "barcode": "999400015.", "grower": "332201", "mass": "84.0",  "grade": "L4OK",  "buyer_grade": "L4OMA", "lot": "0019", "status": "Loaded" }
+  ]
+}

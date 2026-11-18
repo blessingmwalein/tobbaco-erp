@@ -26,7 +26,14 @@ export const envSchema = z.object({
   /** Base URL used to build links in emails (activation / password reset). */
   APP_BASE_URL: z.string().default("http://localhost:3000"),
 
-  STORAGE_DRIVER: z.enum(["local", "blob"]).default("local"),
+  /**
+   * Where uploaded files (Flow Disk, invoices) are kept:
+   *  - local:    files on disk under STORAGE_LOCAL_DIR — development only (a serverless host has no durable disk);
+   *  - database: file bytes in the PostgreSQL database (private, backed up with the data) — the default on Vercel;
+   *  - blob:     object storage — not implemented.
+   * Unset = "database" on Vercel (VERCEL=1), otherwise "local". See resolveStorageDriver.
+   */
+  STORAGE_DRIVER: z.enum(["local", "database", "blob"]).optional(),
   STORAGE_LOCAL_DIR: z.string().default(".storage"),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
 
@@ -76,3 +83,10 @@ export function resetEnvCache(): void {
 }
 
 export const ENV = Symbol("ENV");
+
+export type StorageDriver = NonNullable<Env["STORAGE_DRIVER"]>;
+
+/** The storage driver to use: the explicit setting, else the database on serverless (Vercel), else local disk. */
+export function resolveStorageDriver(env: Pick<Env, "STORAGE_DRIVER">, runtime: Record<string, string | undefined> = process.env): StorageDriver {
+  return env.STORAGE_DRIVER ?? (runtime.VERCEL ? "database" : "local");
+}

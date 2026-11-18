@@ -1,0 +1,23 @@
+{
+  "format": "leaflogix-shipment",
+  "version": 1,
+  "source_shipment_id": 203,
+  "shipment": {
+    "destination": "Buyer Warehouse A",
+    "carrier": "National Transport",
+    "vehicle": "XYZ 4402",
+    "driver": "Ruth Chikwanda",
+    "departure_date": "2026-06-05",
+    "arrival_date": null,
+    "status": "In Transit",
+    "bale_count": 5,
+    "mass": "476.0"
+  },
+  "bales": [
+    { "barcode": "999300008 ", "grower": "395144", "mass": "109.0", "grade": "L4OK",  "buyer_grade": "L4OMA", "lot": "0082", "status": "Loaded" },
+    { "barcode": "999300009$", "grower": "215819", "mass": "97.0",  "grade": "L4OKA", "buyer_grade": "L4OMA", "lot": "0021", "status": "Loaded" },
+    { "barcode": "999300010V", "grower": "215819", "mass": "85.0",  "grade": "L4OA",  "buyer_grade": "L4OMA", "lot": "0022", "status": "Loaded" },
+    { "barcode": "999300011W", "grower": "276106", "mass": "118.0", "grade": "L4OKA", "buyer_grade": "L4OMA", "lot": "0017", "status": "Loaded" },
+    { "barcode": "999300012X", "grower": "276106", "mass": "76.0",  "grade": "L3OK",  "buyer_grade": "L4OMA", "lot": "0018", "status": "Loaded" }
+  ]
+}

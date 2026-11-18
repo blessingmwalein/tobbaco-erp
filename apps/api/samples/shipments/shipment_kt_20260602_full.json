@@ -1,0 +1,28 @@
+{
+  "format": "leaflogix-shipment",
+  "version": 1,
+  "source_shipment_id": 201,
+  "shipment": {
+    "destination": "Buyer Warehouse A",
+    "carrier": "FastFreight Logistics",
+    "vehicle": "KT 1234",
+    "driver": "Moses Dube",
+    "departure_date": "2026-06-03",
+    "arrival_date": null,
+    "status": "In Transit",
+    "bale_count": 10,
+    "mass": "904.0"
+  },
+  "bales": [
+    { "barcode": "999200001U", "grower": "501234", "mass": "95.0",  "grade": "L3OK",  "buyer_grade": "L3OMA", "lot": "0011", "status": "Loaded" },
+    { "barcode": "999200002V", "grower": "501234", "mass": "88.0",  "grade": "L3OKA", "buyer_grade": "L3OMA", "lot": "0012", "status": "Loaded" },
+    { "barcode": "999200003W", "grower": "502987", "mass": "110.0", "grade": "L4OK",  "buyer_grade": "L4OMA", "lot": "0003", "status": "Loaded" },
+    { "barcode": "999200004X", "grower": "502987", "mass": "103.0", "grade": "L4OKA", "buyer_grade": "L4OMA", "lot": "0004", "status": "Loaded" },
+    { "barcode": "999200005Y", "grower": "503411", "mass": "76.0",  "grade": "L3OKA", "buyer_grade": "L4OMA", "lot": "0022", "status": "Loaded" },
+    { "barcode": "999200006Z", "grower": "503411", "mass": "84.0",  "grade": "L4OA",  "buyer_grade": "L4OMA", "lot": "0023", "status": "Loaded" },
+    { "barcode": "999200007-", "grower": "504100", "mass": "65.0",  "grade": "L2OK",  "buyer_grade": "L2OMA", "lot": "0007", "status": "Loaded" },
+    { "barcode": "999200008.", "grower": "504100", "mass": "72.0",  "grade": "L2OKA", "buyer_grade": "L2OMA", "lot": "0008", "status": "Loaded" },
+    { "barcode": "999200009 ", "grower": "505678", "mass": "120.0", "grade": "L4OKA", "buyer_grade": "L4OMA", "lot": "0031", "status": "Loaded" },
+    { "barcode": "999200010U", "grower": "505678", "mass": "91.0",  "grade": "L4OK",  "buyer_grade": "L4OMA", "lot": "0032", "status": "Loaded" }
+  ]
+}

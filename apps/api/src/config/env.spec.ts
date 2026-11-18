@@ -1,4 +1,4 @@
-import { EnvError, parseEnv } from "./env";
+import { resolveStorageDriver, EnvError, parseEnv } from "./env";
 
 const valid = {
   DATABASE_URL: "postgresql://u:p@host-pooler.neon.tech/db?sslmode=require",
@@ -10,7 +10,7 @@ describe("environment", () => {
   it("accepts a minimal valid configuration and applies safe defaults", () => {
     const env = parseEnv(valid);
     expect(env.PORT).toBe(4000);
-    expect(env.STORAGE_DRIVER).toBe("local");
+    expect(env.STORAGE_DRIVER).toBeUndefined(); // resolved at startup: database on Vercel, local otherwise
     expect(env.MAIL_DRIVER).toBe("outbox");
     expect(env.REFRESH_TOKEN_TTL_DAYS).toBe(14);
     expect(env.LOGIN_MAX_FAILURES).toBe(5);
@@ -40,5 +40,13 @@ describe("environment", () => {
   it("rejects an unknown storage or mail driver", () => {
     expect(() => parseEnv({ ...valid, STORAGE_DRIVER: "ftp" })).toThrow(EnvError);
     expect(() => parseEnv({ ...valid, MAIL_DRIVER: "pigeon" })).toThrow(EnvError);
+  });
+
+  it("picks the file storage by where the API runs: the database on Vercel, local disk otherwise, an explicit setting always wins", () => {
+    expect(resolveStorageDriver({ STORAGE_DRIVER: undefined }, { VERCEL: "1" })).toBe("database"); // a read-only, throw-away filesystem
+    expect(resolveStorageDriver({ STORAGE_DRIVER: undefined }, {})).toBe("local");
+    expect(resolveStorageDriver({ STORAGE_DRIVER: "local" }, { VERCEL: "1" })).toBe("local");
+    expect(resolveStorageDriver({ STORAGE_DRIVER: "database" }, {})).toBe("database");
+    expect(parseEnv({ ...valid, STORAGE_DRIVER: "database" }).STORAGE_DRIVER).toBe("database");
   });
 });

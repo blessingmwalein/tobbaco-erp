@@ -362,6 +362,17 @@ model Document {
   @@map("documents")
 }
 
+/// File bytes for STORAGE_DRIVER=database (serverless hosts have no durable disk). Read and written only through
+/// DocumentsService, which checks the owning organisation first; `key` is the Document.storageKey.
+model DocumentBlob {
+  key         String   @id
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  @@map("document_blobs")
+}
+
 // ── Flow Disk import, invoice, purchase ───────────────────────────────────────
 model FlowDiskImport {
   id                  String               @id @default(uuid()) @db.Uuid

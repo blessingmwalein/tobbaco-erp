@@ -22,6 +22,9 @@ export async function createApp(): Promise<NestExpressApplication> {
 
   app.set("trust proxy", 1); // behind Vercel / a load balancer: real client IP for rate limiting and audit
   app.disable("x-powered-by");
+  // Flow Disk / shipment files arrive as JSON text. Express' default limit is 100 kB, which a busy sale day exceeds;
+  // 4 MB stays under Vercel's 4.5 MB request cap (larger files need a different upload path).
+  app.useBodyParser("json", { limit: "4mb" });
   app.use(requestIdMiddleware);
   // The web app (another origin) fetches JSON and file downloads with a bearer token — no cookies — so a
   // cross-origin resource policy of "same-origin" would only get in the way of document previews.

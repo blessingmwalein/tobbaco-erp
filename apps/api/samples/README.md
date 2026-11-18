@@ -65,6 +65,42 @@ Same steps as above — import Flow Disk, confirm, import shipment, confirm, rec
 
 ---
 
+---
+
+## Test sets for the testing team
+
+Three self-contained sets — each has fresh barcodes not used by any other set.
+Import the Flow Disk first, then the matching shipment file(s).
+
+### Set A — KT buyer, 10 bales, single shipment (simplest)
+
+| Step | File | Notes |
+|------|------|-------|
+| 1. Flow Disk | `flowdisk/KT_20260602_test_10.csv` | 10 bales · 904 kg · US$2,172.59 · buyer KT |
+| 2. Shipment  | `shipments/shipment_kt_20260602_full.json` | All 10 bales · truck KT 1234 · driver Moses Dube |
+
+### Set B — MZ buyer, 12 bales, **partial delivery (7 + 5)**
+
+| Step | File | Notes |
+|------|------|-------|
+| 1. Flow Disk | `flowdisk/MZ_20260603_test_12.csv` | 12 bales · 1,121 kg · US$2,869.27 · buyer MZ |
+| 2. Shipment part 1 | `shipments/shipment_mz_20260603_part1.json` | First 7 bales · truck ABC 7701 · driver Samuel Mutare |
+| 3. Shipment part 2 | `shipments/shipment_mz_20260603_part2.json` | Remaining 5 bales · truck XYZ 4402 · driver Ruth Chikwanda |
+
+> **Partial delivery test:** import the Flow Disk, then import and confirm part 1 only.
+> The reconciliation should show 7/12 dispatched and the purchase still open.
+> Then import and confirm part 2 to complete delivery.
+
+### Set C — MZ buyer, 15 bales, **partial delivery (8 + 7)** — largest set
+
+| Step | File | Notes |
+|------|------|-------|
+| 1. Flow Disk | `flowdisk/MZ_20260604_test_15.csv` | 15 bales · 1,387 kg · US$3,486.47 · buyer MZ |
+| 2. Shipment part 1 | `shipments/shipment_mz_20260604_part1.json` | First 8 bales · truck TRK 8810 · driver David Ncube |
+| 3. Shipment part 2 | `shipments/shipment_mz_20260604_part2.json` | Remaining 7 bales · truck TRK 9921 · driver Anna Sibanda |
+
+---
+
 ## File reference
 
 ### Flow Disk files (`flowdisk/`)
