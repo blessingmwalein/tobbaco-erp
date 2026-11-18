@@ -8,9 +8,9 @@ import { buyerApi, describeError, useBuyerMutation, useBuyerQuery } from "@/lib/
 import { RequireBuyerPermission } from "@/components/buyer/require-buyer-session";
 
 export default function CompanyProfilePage() {
-  const company = useBuyerQuery<CompanyProfileInput & { code: string; status: string }>("/company");
+  const company = useBuyerQuery<CompanyProfileInput & { code: string; status: string }>("/buyer/company");
   const form = useForm<CompanyProfileInput>({ resolver: zodResolver(companyProfileSchema) });
-  const update = useBuyerMutation((values: CompanyProfileInput) => buyerApi.patch("/company", values), { success: "Company profile saved", toastError: false });
+  const update = useBuyerMutation((values: CompanyProfileInput) => buyerApi.patch("/buyer/company", values), { success: "Company profile saved", toastError: false });
   const onSubmit = form.handleSubmit(async (values) => { await update.mutateAsync(values); void company.refetch(); });
   const data = company.data;
   return <RequireBuyerPermission permission="buyer.company.manage"><PageHeader title="Company profile" description="Manage the details shown on buyer documents." />

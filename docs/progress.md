@@ -26,6 +26,21 @@ Last updated: 2026-11-09. Rule: never start a later phase before the previous on
 - [ ] **Dribbble design fusion** — blocked on the reference images (see `docs/design/references/README.md`); re-capture screenshots afterwards
 - [ ] **UI approval gate — owner must approve (or list changes) before ANY backend work**
 
+## Buyer Portal (external buyers, real API + database) — ✅ reports, dashboard shipments and date pickers (2026-11-17)
+Details, formulas and how to re-check: [`docs/buyer-portal/REPORTS.md`](buyer-portal/REPORTS.md).
+- [x] **Reports** — Purchase, Receiving and Inventory report hubs (12 reports) with filters in the URL, key figures, server paging/sorting and
+  designed **PDF / Excel / CSV** exports of *every* matching row (audited). The old "Cannot GET /api/v1/reports" was a missing `buyer/` prefix on the web calls
+  (same bug fixed on the admin audit, users and company pages).
+- [x] **Receiving compared three ways** — Purchase vs Shipment vs Received, with not-yet-dispatched, outstanding and mass variance.
+- [x] **Dashboard** — total purchases and the dates they cover; shipments in transit / arrived / being received / awaiting storage (live); corrected stock,
+  levies and payable figures (no more EXPECTED bales counted as stock, no double-counted tobacco value).
+- [x] **Date pickers** — shadcn-style `DatePicker` / `DateRangePicker` replace every native date input in the Buyer Portal (internal ERP unchanged).
+- [x] **Dates** — business day = Africa/Harare, end day inclusive, one helper (`apps/api/src/common/date-range.ts`).
+- [x] Safety — destructive test/e2e scripts and the integration-test setup refuse to run against the development database.
+- Tests: API 74 unit + 104 integration, web 277 unit, 30+ browser tests on the buyer project (real API + database).
+- [ ] Processing reports (dispatch/return registers, processing reconciliation) — deliberately out of this round.
+- [ ] Use the shared export kit in the purchase-reconciliation PDF/CSV (`ReconciliationService`) — it still has its own copy.
+
 ## Phases 2–12 — 🔒 not started (blocked by the approval gate)
 | Phase | Scope |
 |---|---|

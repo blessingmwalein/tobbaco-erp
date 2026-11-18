@@ -53,7 +53,7 @@ test.describe("Buyer Portal — authentication (real API)", () => {
     await signInBuyer(page, ACCOUNTS.admin);
     const admin = await navLabels(page);
     expect(admin).toEqual(
-      expect.arrayContaining(["Dashboard", "Buyer Invoices", "Flow Disk Imports", "Bale Receiving", "Warehouse Inventory", "Dispatches", "Bale Traceability", "Buyer Users", "Company Profile", "Account Settings"]),
+      expect.arrayContaining(["Dashboard", "Invoices Import", "Invoices", "Purchase Register", "Invoice Shipments", "Bales Receiving", "Receiving Reconciliation", "Warehouse Inventory", "Bale Traceability", "Purchase Reports", "Receiving Reports", "Inventory Reports", "Buyer Users", "Company Profile", "Account Settings"]),
     );
     await signOutBuyer(page);
 

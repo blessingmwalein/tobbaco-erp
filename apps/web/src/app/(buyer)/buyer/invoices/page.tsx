@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Search, X } from "lucide-react";
-import { Button, Card, CardContent, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@tobacco/ui";
+import { Button, Card, CardContent, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, DateRangePicker } from "@tobacco/ui";
 import { RequireBuyerPermission } from "@/components/buyer/require-buyer-session";
 import { useBuyerQuery } from "@/lib/api";
 import { DataTableCard, PageIntro, Pagination, QueryState, RecordLink } from "../_components/buyer-data";
@@ -26,10 +26,9 @@ export default function BuyerInvoicesPage() {
   function sortIcon(column: Sort) { return sort !== column ? <ArrowUpDown className="size-3.5" /> : dir === "asc" ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />; }
   return <RequireBuyerPermission permission="buyer.invoices.view"><PageIntro title="Buyer invoices" description="Invoices and charges imported for your company." />
     <Card className="mb-6"><CardContent className="space-y-4 pt-6">
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         <label className="space-y-1 text-sm"><span className="text-muted-foreground">Search invoice or buyer</span><div className="relative"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => applyFilter(setSearch, event.target.value)} placeholder="Reference, buyer..." /></div></label>
-        <label className="space-y-1 text-sm"><span className="text-muted-foreground">Sale date from</span><Input type="date" value={from} onChange={(event) => applyFilter(setFrom, event.target.value)} /></label>
-        <label className="space-y-1 text-sm"><span className="text-muted-foreground">Sale date to</span><Input type="date" value={to} onChange={(event) => applyFilter(setTo, event.target.value)} /></label>
+        <div className="space-y-1 text-sm"><span className="text-muted-foreground">Sale date</span><DateRangePicker aria-label="Sale date" value={{ from: from || undefined, to: to || undefined }} onChange={(range) => { applyFilter(setFrom, range.from ?? ""); applyFilter(setTo, range.to ?? ""); }} /></div>
         <label className="space-y-1 text-sm"><span className="text-muted-foreground">Floor</span><Input value={floor} onChange={(event) => applyFilter(setFloor, event.target.value)} placeholder="e.g. ETHICAL SALES FLOOR" /></label>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span className="font-medium">Current filters:</span>{activeFilters.length ? activeFilters.map((filter) => <span key={filter} className="rounded-full bg-muted px-2.5 py-1">{filter}</span>) : <span>All invoices</span>}{activeFilters.length ? <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setFrom(""); setTo(""); setFloor(""); setPage(1); }}><X /> Clear filters</Button> : null}</div>

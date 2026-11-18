@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { AppError } from "../../common/app-error";
+import { timestampRange } from "../../common/date-range";
 import type { RequestMeta } from "../../common/decorators";
 import type { BuyerPrincipal } from "../../common/principal";
 import { PrismaService } from "../../database/prisma.service";
@@ -12,8 +13,8 @@ export class MovementsService {
 
   list(p: BuyerPrincipal, q: { baleId?: string; warehouseId?: string; from?: string; to?: string }) {
     return this.prisma.forOrganisation(p.organisationId).baleMovement.findMany({
-      where: { baleId: q.baleId, OR: q.warehouseId ? [{ fromWarehouseId: q.warehouseId }, { toWarehouseId: q.warehouseId }] : undefined, performedAt: q.from || q.to ? { gte: q.from ? new Date(q.from) : undefined, lte: q.to ? new Date(q.to) : undefined } : undefined },
-      orderBy: { performedAt: "desc" }, take: 100,
+      where: { baleId: q.baleId, OR: q.warehouseId ? [{ fromWarehouseId: q.warehouseId }, { toWarehouseId: q.warehouseId }] : undefined, performedAt: timestampRange(q.from, q.to) },
+      orderBy: { performedAt: "desc" }, take: 500,
       include: { bale: { select: { barcode: true, massKg: true, status: true } } },
     });
   }

@@ -2,37 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ClipboardCheck } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  DataTable,
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  EmptyState,
-  Input,
-  KeyValue,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  type ColumnDef,
-} from "@tobacco/ui";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, DataTable, Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input, KeyValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Sheet, SheetContent, SheetDescription, SheetTitle, type ColumnDef, DateRangePicker } from "@tobacco/ui";
 import { RequireBuyerPermission } from "@/components/buyer/require-buyer-session";
 import { BuyerSelect } from "@/components/buyer/buyer-resource";
 import { buyerApi, describeError, useBuyerMutation, useBuyerQuery } from "@/lib/api";
@@ -195,10 +165,9 @@ export default function ReceivingReconciliationPage() {
       {sessions.isLoading ? <LoadingTable /> : sessions.isError ? <Card><EmptyState title="Could not load reconciliation" description={describeError(sessions.error)} action={<Button variant="secondary" onClick={() => void sessions.refetch()}>Try again</Button>} /></Card> : !sessions.data?.length ? <Card><EmptyState icon={ClipboardCheck} title="Nothing to reconcile" description="Receiving sessions will appear here after scanning begins." /></Card> : (
         <div className="space-y-3">
           <Card>
-            <CardContent className="grid gap-3 pt-6 sm:grid-cols-2 lg:grid-cols-4">
+            <CardContent className="grid gap-3 pt-6 sm:grid-cols-2 lg:grid-cols-3">
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search session or purchase" aria-label="Search reconciliation" />
-              <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} aria-label="Started from" />
-              <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} aria-label="Started to" />
+              <DateRangePicker aria-label="Started dates" placeholder="Any start date" value={{ from: from || undefined, to: to || undefined }} onChange={(range) => { setFrom(range.from ?? ""); setTo(range.to ?? ""); }} />
               <BuyerSelect label="Session status" value={status} onValueChange={setStatus} placeholder="All statuses" options={[{ value: "OPEN", label: "Open" }, { value: "CONFIRMED", label: "Confirmed" }, { value: "ALLOCATED", label: "Allocated" }, { value: "CANCELLED", label: "Cancelled" }]} />
             </CardContent>
           </Card>

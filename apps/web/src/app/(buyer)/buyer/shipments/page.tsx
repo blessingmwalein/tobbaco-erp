@@ -1,50 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, FileUp, Truck } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Callout,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  DataTable,
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  EmptyState,
-  Field,
-  Input,
-  KeyValue,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Textarea,
-  toast,
-  type ColumnDef,
-} from "@tobacco/ui";
+import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, Command, CommandEmpty, CommandInput, CommandItem, CommandList, DataTable, Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, Field, Input, KeyValue, Popover, PopoverContent, PopoverTrigger, Sheet, SheetContent, SheetDescription, SheetTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea, toast, type ColumnDef, DateRangePicker, DatePicker } from "@tobacco/ui";
 import { RequireBuyerPermission } from "@/components/buyer/require-buyer-session";
 import { BuyerQueryState, BuyerResourceHeader, BuyerSelect } from "@/components/buyer/buyer-resource";
 import { buyerApi, describeError, useBuyerMutation, useBuyerQuery } from "@/lib/api";
@@ -120,10 +79,12 @@ function statusTone(status: string): "success" | "warning" | "danger" | "neutral
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function ShipmentsPage() {
+/** Dashboard tiles deep-link here with ?status=… — read from the router, which already has the new URL during the first render. */
+function ShipmentsView() {
+  const initialStatus = useSearchParams().get("status") ?? "";
   // Filters
   const [search, setSearch]     = useState("");
-  const [status, setStatus]     = useState("");
+  const [status, setStatus]     = useState(initialStatus);
   const [from, setFrom]         = useState("");
   const [to, setTo]             = useState("");
   const [warehouse, setWarehouse] = useState("");
@@ -355,8 +316,7 @@ export default function ShipmentsPage() {
             placeholder="All warehouses"
             options={activeWarehouses.map((w) => ({ value: w.id, label: `${w.code} · ${w.name}` }))}
           />
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Dispatch date from" />
-          <Input type="date" value={to}   onChange={(e) => setTo(e.target.value)}   aria-label="Dispatch date to" />
+          <DateRangePicker aria-label="Dispatch dates" placeholder="Any dispatch date" value={{ from: from || undefined, to: to || undefined }} onChange={(range) => { setFrom(range.from ?? ""); setTo(range.to ?? ""); }} />
         </CardContent>
         {(search || status || warehouse || from || to) && (
           <CardContent className="pb-4 pt-0">
@@ -464,7 +424,7 @@ export default function ShipmentsPage() {
                     <Input value={override.reference} onChange={(e) => setOverride((o) => ({ ...o, reference: e.target.value }))} placeholder="Auto from JSON" />
                   </Field>
                   <Field label="Departure date" hint="Derived from departure_date if blank.">
-                    <Input type="date" value={override.dispatchDate} onChange={(e) => setOverride((o) => ({ ...o, dispatchDate: e.target.value }))} />
+                    <DatePicker aria-label="Dispatch date" placeholder="Use the date in the file" value={override.dispatchDate} onChange={(value) => setOverride((o) => ({ ...o, dispatchDate: value }))} />
                   </Field>
                   <Field label="Truck registration" hint="Derived from vehicle if blank.">
                     <Input value={override.truck} onChange={(e) => setOverride((o) => ({ ...o, truck: e.target.value }))} placeholder="Auto from JSON" />
@@ -779,5 +739,13 @@ function SearchablePicker({ value, onChange, placeholder, options }: {
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+export default function ShipmentsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ShipmentsView />
+    </Suspense>
   );
 }

@@ -2,24 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { History, Warehouse as WarehouseIcon } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  DataTable,
-  EmptyState,
-  Input,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  Skeleton,
-  type ColumnDef,
-} from "@tobacco/ui";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, DataTable, EmptyState, Input, Sheet, SheetContent, SheetDescription, SheetTitle, Skeleton, type ColumnDef, DateRangePicker } from "@tobacco/ui";
 import { RequireBuyerPermission } from "@/components/buyer/require-buyer-session";
 import { BuyerQueryState, BuyerResourceHeader, BuyerSelect } from "@/components/buyer/buyer-resource";
 import { describeError, useBuyerQuery } from "@/lib/api";
@@ -79,12 +62,11 @@ export default function InventoryPage() {
         {!warehouses.data?.length ? <EmptyState icon={WarehouseIcon} title="No warehouses available" description="Inventory is available after a warehouse is configured." /> : (
           <>
             <Card className="mb-4">
-              <CardContent className="grid gap-3 pt-6 sm:grid-cols-2 lg:grid-cols-5">
+              <CardContent className="grid gap-3 pt-6 sm:grid-cols-2 lg:grid-cols-4">
                 <BuyerSelect label="Warehouse" value={warehouseId} onValueChange={selectWarehouse} placeholder="Select warehouse" options={warehouses.data.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} />
                 <BuyerSelect label="Bay" value={bayId || "all-bays"} onValueChange={(value) => { setBayId(value === "all-bays" ? "" : value); setRowId(""); }} placeholder="All bays" options={[{ value: "all-bays", label: "All bays" }, ...(warehouse?.bays ?? []).map((item) => ({ value: item.id, label: item.name ? `${item.code} · ${item.name}` : item.code }))]} />
                 <BuyerSelect label="Row" value={rowId || "all-rows"} onValueChange={(value) => setRowId(value === "all-rows" ? "" : value)} placeholder="All rows" options={[{ value: "all-rows", label: "All rows" }, ...(bay?.rows ?? []).map((item) => ({ value: item.id, label: item.code }))]} />
-                <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} aria-label="Received from" />
-                <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} aria-label="Received to" />
+                <DateRangePicker aria-label="Received dates" placeholder="Any received date" value={{ from: from || undefined, to: to || undefined }} onChange={(range) => { setFrom(range.from ?? ""); setTo(range.to ?? ""); }} />
               </CardContent>
             </Card>
             <BuyerQueryState loading={inventory.isLoading} error={inventory.error} retry={() => void inventory.refetch()}>

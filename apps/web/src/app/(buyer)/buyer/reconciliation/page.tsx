@@ -3,14 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ClipboardCheck, Download, Lock } from "lucide-react";
-import {
-  Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle,
-  DataTable,
-  Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  EmptyState, Input, KeyValue,
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-  type ColumnDef,
-} from "@tobacco/ui";
+import { Badge, Button, Callout, Card, CardContent, CardDescription, CardHeader, CardTitle, DataTable, Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input, KeyValue, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, type ColumnDef, DateRangePicker } from "@tobacco/ui";
 import { RequireBuyerPermission } from "@/components/buyer/require-buyer-session";
 import { BuyerQueryState, BuyerSelect } from "@/components/buyer/buyer-resource";
 import { buyerApi, describeError, saveBlob, useBuyerMutation, useBuyerQuery } from "@/lib/api";
@@ -217,11 +210,10 @@ function ReconciliationPageInner() {
 
       {/* Filter bar */}
       <Card className="mb-4">
-        <CardContent className="grid gap-3 pt-6 sm:grid-cols-2 lg:grid-cols-5">
+        <CardContent className="grid gap-3 pt-6 sm:grid-cols-2 lg:grid-cols-4">
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search purchase or invoice" aria-label="Search reconciliations" />
           <Input value={floor}  onChange={(e) => setFloor(e.target.value)}  placeholder="Filter floor"             aria-label="Filter floor" />
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="From" />
-          <Input type="date" value={to}   onChange={(e) => setTo(e.target.value)}   aria-label="To" />
+          <DateRangePicker aria-label="Purchase dates" placeholder="Any sale date" value={{ from: from || undefined, to: to || undefined }} onChange={(range) => { setFrom(range.from ?? ""); setTo(range.to ?? ""); }} />
           <BuyerSelect
             label="Status"
             value={status}
